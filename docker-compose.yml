@@ -1,0 +1,201 @@
+version: '3.8'
+
+services:
+  # ===========================================================
+  # INFRAESTRUCTURA
+  # ===========================================================
+
+  mqtt-broker:
+    image: eclipse-mosquitto:2
+    container_name: mqtt-broker
+    ports:
+      - "${MQTT_PORT:-1883}:1883"
+      - "9001:9001"
+    volumes:
+      - ./mosquitto/config:/mosquitto/config:ro
+      - mosquitto-data:/mosquitto/data
+      - mosquitto-log:/mosquitto/log
+    healthcheck:
+      test: ["CMD-SHELL", "mosquitto_pub -h localhost -t healthcheck -m ping || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  postgres-master:
+    image: postgres:14-alpine
+    container_name: postgres-master
+    environment:
+      POSTGRES_DB: ${DB_NAME:-sistema_alertas}
+      POSTGRES_USER: ${DB_USER:-user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-password}
+    command: >
+      postgres
+        -c wal_level=replica
+        -c max_wal_senders=5
+        -c max_replication_slots=5
+        -c hot_standby=on
+    ports:
+      - "${DB_PORT_MASTER:-5434}:5432"
+    volumes:
+      - postgres-master-data:/var/lib/postgresql/data
+      - ./postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-user} -d ${DB_NAME:-sistema_alertas}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  postgres-replica:
+    image: postgres:14-alpine
+    container_name: postgres-replica
+    environment:
+      POSTGRES_DB: ${DB_NAME:-sistema_alertas}
+      POSTGRES_USER: ${DB_USER:-user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-password}
+      PGUSER: ${DB_USER:-user}
+      PGPASSWORD: ${DB_PASSWORD:-password}
+      PGHOST: postgres-master
+    command: >
+      bash -c "
+        until pg_basebackup --pgdata=/var/lib/postgresql/data -R --slot=replication_slot_1 --host=postgres-master --port=5432 -U ${DB_USER:-user}; do
+          echo 'Esperando al maestro postgres...'
+          sleep 2
+        done &&
+        echo 'Backup completado. Iniciando réplica...' &&
+        chmod 0700 /var/lib/postgresql/data &&
+        chown -R postgres:postgres /var/lib/postgresql/data &&
+        su postgres -c 'postgres'
+      "
+    ports:
+      - "${DB_PORT_REPLICA:-5433}:5432"
+    depends_on:
+      postgres-master:
+        condition: service_healthy
+    volumes:
+      - postgres-replica-data:/var/lib/postgresql/data
+
+  # ===========================================================
+  # MICROSERVICIOS
+  # ===========================================================
+
+  ms-recepcion-alertas-1: &ms-recepcion-alertas-base
+    build: ./services/ms-recepcionAlertas
+    container_name: ms-recepcion-alertas-1
+    environment:
+      MQTT_URL: mqtt://mqtt-broker:${MQTT_PORT:-1883}
+      REDIS_HOST: redis
+      REDIS_PORT: ${REDIS_PORT:-6379}
+      APP_PORT: 3001
+    depends_on:
+      mqtt-broker:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  ms-recepcion-alertas-2:
+    <<: *ms-recepcion-alertas-base
+    container_name: ms-recepcion-alertas-2
+
+  ms-recepcion-alertas-3:
+    <<: *ms-recepcion-alertas-base
+    container_name: ms-recepcion-alertas-3
+
+  ms-geolocalizacion:
+    build: ./services/ms-geolocalizacion
+    container_name: ms-geolocalizacion
+    environment:
+      REDIS_HOST: redis
+      REDIS_PORT: ${REDIS_PORT:-6379}
+      APP_PORT: 3002
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  ms-prioridad:
+    build: ./services/ms-prioridad
+    container_name: ms-prioridad
+    environment:
+      REDIS_HOST: redis
+      REDIS_PORT: ${REDIS_PORT:-6379}
+      APP_PORT: 3003
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  ms-notificaciones:
+    build: ./services/ms-notificaciones
+    container_name: ms-notificaciones
+    ports:
+      - "${MS_NOTIFICACIONES_PORT:-3004}:${MS_NOTIFICACIONES_PORT:-3004}"
+    environment:
+      REDIS_HOST: redis
+      REDIS_PORT: ${REDIS_PORT:-6379}
+      APP_PORT: 3004
+      GRPC_HISTORIAL_HOST: ms-historial
+      GRPC_HISTORIAL_PORT: ${GRPC_PORT:-50051}
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  ms-historial:
+    build: ./services/ms-historial
+    container_name: ms-historial
+    ports:
+      - "${MS_HISTORIAL_PORT:-3005}:${MS_HISTORIAL_PORT:-3005}"
+      - "${GRPC_PORT:-50051}:50051"
+    environment:
+      DB_HOST_MASTER: postgres-master
+      DB_HOST_REPLICA: postgres-replica
+      DB_NAME: ${DB_NAME:-sistema_alertas}
+      DB_USER: ${DB_USER:-user}
+      DB_PASSWORD: ${DB_PASSWORD:-password}
+      DB_PORT_MASTER: 5432
+      DB_PORT_REPLICA: 5432
+      REDIS_HOST: redis
+      REDIS_PORT: ${REDIS_PORT:-6379}
+      APP_PORT: 3005
+      GRPC_PORT: ${GRPC_PORT:-50051}
+    depends_on:
+      postgres-master:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  # ===========================================================
+  # BALANCEADOR DE CARGA
+  # ===========================================================
+
+  nginx-balancer:
+    image: nginx:1.21-alpine
+    container_name: nginx-balancer
+    ports:
+      - "${NGINX_PORT:-8080}:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - ms-recepcion-alertas-1
+      - ms-recepcion-alertas-2
+      - ms-recepcion-alertas-3
+
+# ===========================================================
+# VOLÚMENES
+# ===========================================================
+volumes:
+  redis-data:
+  postgres-master-data:
+  postgres-replica-data:
+  mosquitto-data:
+  mosquitto-log:

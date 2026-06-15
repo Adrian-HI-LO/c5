@@ -1,0 +1,20 @@
+{
+  "name": "ms-notificaciones",
+  "version": "2.0.0",
+  "description": "Microservicio de Notificaciones en Tiempo Real - Sistema C5 Alerta Ciudadana",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node --watch index.js"
+  },
+  "keywords": ["microservicio", "notificaciones", "websocket", "grpc", "c5"],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@grpc/grpc-js": "^1.12.0",
+    "@grpc/proto-loader": "^0.7.15",
+    "express": "^5.2.1",
+    "redis": "^6.0.0",
+    "ws": "^8.21.0"
+  }
+}

@@ -1,0 +1,9 @@
+@@ -62,7 +62,7 @@
+         done &&
+         echo 'Backup completado. Iniciando réplica...' &&
+         chmod 0700 /var/lib/postgresql/data &&
+-        postgres"
++        su-exec postgres postgres"
+     ports:
+       - "${DB_PORT_REPLICA:-5433}:5432"
+     depends_on:

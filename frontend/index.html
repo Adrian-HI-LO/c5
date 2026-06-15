@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>C5 - Panel de Operador</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #1e1e1e; color: #fff; margin: 0; padding: 20px; }
+        h1 { text-align: center; color: #00d2ff; }
+        #alertas { display: flex; flex-direction: column; gap: 10px; max-width: 800px; margin: 0 auto; }
+        .alerta { padding: 15px; border-radius: 8px; border-left: 8px solid; background-color: #2d2d2d; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
+        .crítica { border-color: #ff3333; }
+        .alta { border-color: #ff9933; }
+        .baja { border-color: #33cc33; }
+        .media { border-color: #ffcc00; }
+        .meta { font-size: 0.85em; color: #aaa; margin-top: 10px; }
+    </style>
+</head>
+<body>
+    <h1>🚨 Panel de Control C5</h1>
+    <p style="text-align: center;" id="status">Conectando al servidor...</p>
+    <div id="alertas"></div>
+
+    <script>
+        const ws = new WebSocket('ws://localhost:3004');
+        const status = document.getElementById('status');
+        const alertasContainer = document.getElementById('alertas');
+
+        ws.onopen = () => {
+            status.textContent = '🟢 Conectado al sistema de notificaciones';
+            status.style.color = '#33cc33';
+        };
+
+        ws.onclose = () => {
+            status.textContent = '🔴 Desconectado. Refresca la página.';
+            status.style.color = '#ff3333';
+        };
+
+        ws.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            if (data.tipo === 'conexion_establecida') return;
+
+            const alertaDiv = document.createElement('div');
+            
+            // Determinar color por prioridad
+            let clasePrioridad = 'alerta';
+            if (data.prioridad === 'crítica' || data.prioridad === 'critica' || data.nivel === 'crítica') clasePrioridad += ' crítica';
+            else if (data.prioridad === 'alta' || data.nivel === 'alta') clasePrioridad += ' alta';
+            else clasePrioridad += ' baja';
+
+            alertaDiv.className = clasePrioridad;
+
+            alertaDiv.innerHTML = `
+                <h3>Emergencia: ${data.prioridad ? data.prioridad.toUpperCase() : 'N/A'}</h3>
+                <p><strong>Dispositivo:</strong> ${data.ID_dispositivo}</p>
+                <p><strong>Coordenadas:</strong> Lat ${data.coordenadas?.lat}, Lon ${data.coordenadas?.lon}</p>
+                <div class="meta">Recibido: ${new Date(data.recibido_en || data.timestamp).toLocaleString()}</div>
+            `;
+
+            alertasContainer.prepend(alertaDiv); // Agregar al principio
+        };
+    </script>
+</body>
+</html>

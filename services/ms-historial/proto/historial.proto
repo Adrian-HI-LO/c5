@@ -1,0 +1,58 @@
+// proto/historial.proto
+// Definición del contrato gRPC para el Microservicio de Historial
+// Sistema C5 - Alerta Ciudadana
+//
+// Este archivo define el servicio AlertaService que recibe alertas
+// desde ms-notificaciones vía gRPC para su persistencia en PostgreSQL.
+
+syntax = "proto3";
+
+package historial;
+
+// --- Servicio principal ---
+service AlertaService {
+  // Registra una alerta procesada en la base de datos maestra.
+  rpc RegistrarAlerta (AlertaRequest) returns (AlertaResponse);
+
+  // Consulta el estado del servicio (health check gRPC).
+  rpc HealthCheck (HealthRequest) returns (HealthResponse);
+}
+
+// --- Mensajes de Alerta ---
+
+message Coordenadas {
+  double lat = 1;
+  double lon = 2;
+}
+
+message Geolocalizacion {
+  string direccion  = 1;
+  string pais       = 2;
+  string ciudad     = 3;
+  string estado     = 4;
+  string codigoPostal = 5;
+}
+
+message AlertaRequest {
+  string id_dispositivo  = 1;
+  Coordenadas coordenadas = 2;
+  string timestamp       = 3;
+  string tipo_emergencia = 4;
+  Geolocalizacion geolocalizacion = 5;
+  string prioridad       = 6;
+}
+
+message AlertaResponse {
+  bool   exito     = 1;
+  int32  id_alerta = 2;
+  string mensaje   = 3;
+}
+
+// --- Mensajes de Health Check ---
+
+message HealthRequest {}
+
+message HealthResponse {
+  string estado    = 1;
+  string timestamp = 2;
+}
