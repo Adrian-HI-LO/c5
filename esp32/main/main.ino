@@ -7,6 +7,7 @@
 #include <WiFi.h>
 #include <PubSubClient.h>
 #include <ArduinoJson.h>
+#include <MD5Builder.h>
 
 // ============================================================
 // CONFIGURACIÓN - MODIFICAR SEGÚN TU RED Y ENTORNO
@@ -111,6 +112,21 @@ bool conectarMqtt() {
 // FUNCIÓN PRINCIPAL: PUBLICAR ALERTA
 // ============================================================
 
+String generarHashAlerta(int clics, unsigned long timestamp) {
+  // Generar ID único determinístico para deduplicación
+  String inputStr = String(DEVICE_ID) + "_" + String(timestamp) + "_" + String(clics);
+  
+  // Usar MD5Builder para generar hash en ESP32
+  MD5Builder md5;
+  md5.begin();
+  md5.add(inputStr.c_str());
+  md5.calculate();
+  
+  // Retornar primeros 12 caracteres del hash
+  String fullHash = md5.toString();
+  return fullHash.substring(0, 12);
+}
+
 void publicarAlerta(int clics) {
   doc.clear();
   
@@ -120,21 +136,24 @@ void publicarAlerta(int clics) {
   else if(clics == 2) prioridadAsignada = "alta";
   else prioridadAsignada = "baja";
 
+  unsigned long timestamp_ms = millis();
+  String alert_id = generarHashAlerta(clics, timestamp_ms);
+
+  doc["alert_id"] = alert_id;  // ID único para deduplicación
   doc["ID_dispositivo"] = DEVICE_ID;
-  doc["prioridad"]      = prioridadAsignada; 
+  doc["prioridad"] = prioridadAsignada; 
   
   JsonObject coords = doc.createNestedObject("coordenadas");
-  coords["lat"] = LAT_DISPOSITIVO; // Corregido con la variable global correcta
-  coords["lon"] = LON_DISPOSITIVO; // Corregido con la variable global correcta
+  coords["lat"] = LAT_DISPOSITIVO; 
+  coords["lon"] = LON_DISPOSITIVO; 
   
-  // Nota: Al no haber servidor NTP activo, enviamos el tiempo activo en milisegundos
-  doc["timestamp_ms"] = millis(); 
+  doc["timestamp_ms"] = timestamp_ms; 
 
   size_t n = serializeJson(doc, buffer, sizeof(buffer));
   bool publicado = mqttClient.publish(MQTT_TOPIC, buffer, n);
   
   if (publicado) {
-    Serial.printf("[MQTT] ✓ Alerta %s publicada (%d clics)\n", prioridadAsignada.c_str(), clics);
+    Serial.printf("[MQTT] ✓ Alerta %s publicada (ID: %s, %d clics)\n", prioridadAsignada.c_str(), alert_id.c_str(), clics);
     // Feedback visual: destello largo al enviar exitosamente
     digitalWrite(PIN_LED, HIGH);
     delay(500);

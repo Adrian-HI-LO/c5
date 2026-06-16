@@ -54,6 +54,9 @@ function validarAlerta(alerta) {
     errores.push('Campo "prioridad" es requerido y debe ser un string.');
   }
 
+  // alert_id es opcional pero recomendado para deduplicación
+  // No validamos como error, solo como dato complementario
+
   return {
     valida: errores.length === 0,
     errores,

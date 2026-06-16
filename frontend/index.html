@@ -5,60 +5,616 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>C5 - Panel de Operador</title>
     <style>
-        body { font-family: Arial, sans-serif; background-color: #1e1e1e; color: #fff; margin: 0; padding: 20px; }
-        h1 { text-align: center; color: #00d2ff; }
-        #alertas { display: flex; flex-direction: column; gap: 10px; max-width: 800px; margin: 0 auto; }
-        .alerta { padding: 15px; border-radius: 8px; border-left: 8px solid; background-color: #2d2d2d; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
-        .crítica { border-color: #ff3333; }
-        .alta { border-color: #ff9933; }
-        .baja { border-color: #33cc33; }
-        .media { border-color: #ffcc00; }
-        .meta { font-size: 0.85em; color: #aaa; margin-top: 10px; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --color-bg: #0f0f0f;
+            --color-surface: #1a1a1a;
+            --color-surface-hover: #252525;
+            --color-text: #e0e0e0;
+            --color-text-secondary: #a0a0a0;
+            --color-critical: #ff4757;
+            --color-critical-light: #ff6b7a;
+            --color-high: #ffa502;
+            --color-high-light: #ffb84d;
+            --color-medium: #ffd93d;
+            --color-low: #6bcf7f;
+            --color-accent: #00d2ff;
+            --color-success: #43e5a5;
+            --spacing-xs: 4px;
+            --spacing-sm: 8px;
+            --spacing-md: 16px;
+            --spacing-lg: 24px;
+            --border-radius: 12px;
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background-color: var(--color-bg);
+            color: var(--color-text);
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: var(--spacing-lg);
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: var(--spacing-lg);
+            border-bottom: 2px solid var(--color-surface);
+            padding-bottom: var(--spacing-lg);
+        }
+
+        h1 {
+            font-size: 2em;
+            font-weight: 700;
+            margin-bottom: var(--spacing-sm);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: var(--spacing-md);
+        }
+
+        .status-badge {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            padding: var(--spacing-sm) var(--spacing-md);
+            background-color: var(--color-surface);
+            border-radius: 50px;
+            width: fit-content;
+            margin: var(--spacing-md) auto;
+            font-size: 0.9em;
+            border: 2px solid var(--color-text-secondary);
+            transition: var(--transition);
+        }
+
+        .status-badge.connected {
+            border-color: var(--color-success);
+            background-color: rgba(67, 229, 165, 0.1);
+            color: var(--color-success);
+        }
+
+        .status-badge.disconnected {
+            border-color: var(--color-critical);
+            background-color: rgba(255, 71, 87, 0.1);
+            color: var(--color-critical);
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        .status-badge.connected .status-dot {
+            background-color: var(--color-success);
+        }
+
+        .status-badge.disconnected .status-dot {
+            background-color: var(--color-critical);
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .controls {
+            display: flex;
+            gap: var(--spacing-md);
+            justify-content: center;
+            margin-bottom: var(--spacing-lg);
+            flex-wrap: wrap;
+        }
+
+        button {
+            padding: var(--spacing-sm) var(--spacing-md);
+            background-color: var(--color-surface);
+            color: var(--color-text);
+            border: 1px solid var(--color-accent);
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            font-size: 0.9em;
+            font-weight: 500;
+            transition: var(--transition);
+        }
+
+        button:hover {
+            background-color: var(--color-accent);
+            color: var(--color-bg);
+            box-shadow: 0 0 20px rgba(0, 210, 255, 0.3);
+        }
+
+        button:active {
+            transform: scale(0.95);
+        }
+
+        .alerts-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: var(--spacing-md);
+            padding: var(--spacing-md) 0;
+            border-bottom: 1px solid var(--color-surface);
+        }
+
+        .alerts-header h2 {
+            font-size: 1.3em;
+            font-weight: 600;
+        }
+
+        .alerts-count {
+            background-color: var(--color-surface);
+            padding: var(--spacing-sm) var(--spacing-md);
+            border-radius: 50px;
+            font-size: 0.85em;
+            color: var(--color-accent);
+            font-weight: 600;
+        }
+
+        #alertas {
+            display: grid;
+            gap: var(--spacing-md);
+        }
+
+        .alerta {
+            padding: var(--spacing-md);
+            border-radius: var(--border-radius);
+            border-left: 4px solid;
+            background-color: var(--color-surface);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            transition: var(--transition);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .alerta::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, rgba(255,255,255,0.05) 0%, transparent 100%);
+            pointer-events: none;
+        }
+
+        .alerta:hover {
+            background-color: var(--color-surface-hover);
+            box-shadow: 0 8px 20px rgba(0, 210, 255, 0.15);
+            transform: translateY(-2px);
+        }
+
+        .alerta.critica { border-color: var(--color-critical); }
+        .alerta.alta { border-color: var(--color-high); }
+        .alerta.media { border-color: var(--color-medium); }
+        .alerta.baja { border-color: var(--color-low); }
+
+        .alerta-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            gap: var(--spacing-md);
+            margin-bottom: var(--spacing-sm);
+            position: relative;
+            z-index: 1;
+        }
+
+        .alerta-title {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            font-size: 1.1em;
+            font-weight: 600;
+        }
+
+        .priority-badge {
+            padding: var(--spacing-xs) var(--spacing-sm);
+            border-radius: 4px;
+            font-size: 0.75em;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            white-space: nowrap;
+        }
+
+        .priority-badge.critica {
+            background-color: rgba(255, 71, 87, 0.2);
+            color: var(--color-critical-light);
+            border: 1px solid var(--color-critical);
+        }
+
+        .priority-badge.alta {
+            background-color: rgba(255, 165, 2, 0.2);
+            color: var(--color-high-light);
+            border: 1px solid var(--color-high);
+        }
+
+        .priority-badge.media {
+            background-color: rgba(255, 217, 61, 0.2);
+            color: var(--color-medium);
+            border: 1px solid var(--color-medium);
+        }
+
+        .priority-badge.baja {
+            background-color: rgba(107, 207, 127, 0.2);
+            color: var(--color-low);
+            border: 1px solid var(--color-low);
+        }
+
+        .alerta-time {
+            font-size: 0.8em;
+            color: var(--color-text-secondary);
+            white-space: nowrap;
+        }
+
+        .alerta-content {
+            display: grid;
+            gap: var(--spacing-sm);
+            position: relative;
+            z-index: 1;
+        }
+
+        .alerta-field {
+            display: flex;
+            gap: var(--spacing-md);
+            font-size: 0.95em;
+        }
+
+        .alerta-field-label {
+            color: var(--color-text-secondary);
+            font-weight: 500;
+            min-width: 120px;
+        }
+
+        .alerta-field-value {
+            color: var(--color-text);
+            font-family: 'Courier New', monospace;
+            flex: 1;
+        }
+
+        .alerta-coords {
+            background-color: rgba(0, 210, 255, 0.05);
+            padding: var(--spacing-sm);
+            border-radius: 8px;
+            border-left: 2px solid var(--color-accent);
+            margin-top: var(--spacing-sm);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: var(--spacing-lg);
+            color: var(--color-text-secondary);
+        }
+
+        .empty-state svg {
+            width: 64px;
+            height: 64px;
+            opacity: 0.3;
+            margin-bottom: var(--spacing-md);
+        }
+
+        @media (max-width: 640px) {
+            .container {
+                padding: var(--spacing-md);
+            }
+
+            h1 {
+                font-size: 1.5em;
+            }
+
+            .controls {
+                flex-direction: column;
+            }
+
+            button {
+                width: 100%;
+            }
+
+            .alerts-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: var(--spacing-sm);
+            }
+        }
+
+        .delete-btn {
+            position: absolute;
+            top: var(--spacing-md);
+            right: var(--spacing-md);
+            background: transparent;
+            border: none;
+            color: var(--color-text-secondary);
+            cursor: pointer;
+            font-size: 1.2em;
+            opacity: 0;
+            transition: var(--transition);
+            z-index: 2;
+        }
+
+        .alerta:hover .delete-btn {
+            opacity: 1;
+            color: var(--color-critical);
+        }
+
+        .delete-btn:hover {
+            transform: scale(1.2);
+        }
     </style>
 </head>
 <body>
-    <h1>🚨 Panel de Control C5</h1>
-    <p style="text-align: center;" id="status">Conectando al servidor...</p>
-    <div id="alertas"></div>
+    <div class="container">
+        <header>
+            <h1>
+                <span>🚨</span>
+                <span>Centro de Comando C5</span>
+            </h1>
+            <div class="status-badge disconnected" id="status">
+                <span class="status-dot"></span>
+                <span id="statusText">Conectando...</span>
+            </div>
+        </header>
+
+        <div class="controls">
+            <button onclick="limpiarAlertas()">🗑️ Limpiar historial</button>
+            <button onclick="exportarAlertas()">📥 Descargar historial</button>
+        </div>
+
+        <div class="alerts-header">
+            <h2>Alertas en tiempo real</h2>
+            <div class="alerts-count">
+                <span id="alertCount">0</span> alertas
+            </div>
+        </div>
+
+        <div id="alertas">
+            <div class="empty-state">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                </svg>
+                <p>En espera de alertas...</p>
+            </div>
+        </div>
+    </div>
 
     <script>
-        const ws = new WebSocket('ws://localhost:3004');
-        const status = document.getElementById('status');
+        // ===== CONFIG =====
+        const STORAGE_KEY = 'c5_alertas_historial';
+        const MAX_ALERTS_STORED = 100;
+        const WS_RECONNECT_INTERVAL = 3000;
+
+        // ===== STATE =====
+        let alerts = [];
+        let ws = null;
+        let wsReconnectTimeout = null;
+        let processedIds = new Set(); // Deduplicación en frontend
+
+        // ===== DOM ELEMENTS =====
         const alertasContainer = document.getElementById('alertas');
+        const statusBadge = document.getElementById('status');
+        const statusText = document.getElementById('statusText');
+        const alertCount = document.getElementById('alertCount');
 
-        ws.onopen = () => {
-            status.textContent = '🟢 Conectado al sistema de notificaciones';
-            status.style.color = '#33cc33';
-        };
+        // ===== STORAGE =====
+        function loadFromStorage() {
+            try {
+                const stored = localStorage.getItem(STORAGE_KEY);
+                if (stored) {
+                    alerts = JSON.parse(stored);
+                    processedIds = new Set(alerts.map(a => a.id || `${a.ID_dispositivo}-${a.timestamp}`));
+                    renderAlerts();
+                }
+            } catch (err) {
+                console.error('Error loading from storage:', err);
+            }
+        }
 
-        ws.onclose = () => {
-            status.textContent = '🔴 Desconectado. Refresca la página.';
-            status.style.color = '#ff3333';
-        };
+        function saveToStorage() {
+            try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(alerts.slice(0, MAX_ALERTS_STORED)));
+            } catch (err) {
+                console.error('Error saving to storage:', err);
+            }
+        }
 
-        ws.onmessage = (event) => {
-            const data = JSON.parse(event.data);
+        function limpiarAlertas() {
+            if (confirm('¿Eliminar todo el historial de alertas?')) {
+                alerts = [];
+                processedIds.clear();
+                localStorage.removeItem(STORAGE_KEY);
+                renderAlerts();
+            }
+        }
+
+        function exportarAlertas() {
+            const dataStr = JSON.stringify(alerts, null, 2);
+            const dataBlob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(dataBlob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `c5_alertas_${new Date().toISOString().slice(0, 10)}.json`;
+            link.click();
+            URL.revokeObjectURL(url);
+        }
+
+        // ===== ALERTS =====
+        function generateAlertId(alerta) {
+            // Crear ID único basado en dispositivo + timestamp
+            return `${alerta.ID_dispositivo}-${alerta.timestamp || alerta.timestamp_ms || alerta.recibido_en}`;
+        }
+
+        function addAlert(data) {
             if (data.tipo === 'conexion_establecida') return;
 
-            const alertaDiv = document.createElement('div');
-            
-            // Determinar color por prioridad
-            let clasePrioridad = 'alerta';
-            if (data.prioridad === 'crítica' || data.prioridad === 'critica' || data.nivel === 'crítica') clasePrioridad += ' crítica';
-            else if (data.prioridad === 'alta' || data.nivel === 'alta') clasePrioridad += ' alta';
-            else clasePrioridad += ' baja';
+            // Deduplicación
+            const alertId = generateAlertId(data);
+            if (processedIds.has(alertId)) {
+                console.log('Alerta duplicada ignorada:', alertId);
+                return;
+            }
 
-            alertaDiv.className = clasePrioridad;
+            processedIds.add(alertId);
 
-            alertaDiv.innerHTML = `
-                <h3>Emergencia: ${data.prioridad ? data.prioridad.toUpperCase() : 'N/A'}</h3>
-                <p><strong>Dispositivo:</strong> ${data.ID_dispositivo}</p>
-                <p><strong>Coordenadas:</strong> Lat ${data.coordenadas?.lat}, Lon ${data.coordenadas?.lon}</p>
-                <div class="meta">Recibido: ${new Date(data.recibido_en || data.timestamp).toLocaleString()}</div>
-            `;
+            const alert = {
+                id: alertId,
+                prioridad: data.prioridad || 'media',
+                dispositivo: data.ID_dispositivo || 'Desconocido',
+                coordenadas: data.coordenadas || {},
+                timestamp: data.timestamp || new Date().toISOString(),
+                recibido_en: data.recibido_en || new Date().toISOString(),
+            };
 
-            alertasContainer.prepend(alertaDiv); // Agregar al principio
-        };
+            alerts.unshift(alert);
+            alerts = alerts.slice(0, MAX_ALERTS_STORED); // Limitar historial
+
+            saveToStorage();
+            renderAlerts();
+        }
+
+        function deleteAlert(alertId) {
+            alerts = alerts.filter(a => a.id !== alertId);
+            processedIds.delete(alertId);
+            saveToStorage();
+            renderAlerts();
+        }
+
+        function renderAlerts() {
+            alertCount.textContent = alerts.length;
+
+            if (alerts.length === 0) {
+                alertasContainer.innerHTML = `
+                    <div class="empty-state">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                        </svg>
+                        <p>En espera de alertas...</p>
+                    </div>
+                `;
+                return;
+            }
+
+            alertasContainer.innerHTML = alerts.map(alert => {
+                const priorityClass = alert.prioridad.toLowerCase();
+                const recibidoEn = new Date(alert.recibido_en);
+                const tiempoAtrás = getTimeAgo(recibidoEn);
+
+                return `
+                    <div class="alerta ${priorityClass}">
+                        <button class="delete-btn" onclick="deleteAlert('${alert.id}')">✕</button>
+                        <div class="alerta-header">
+                            <div class="alerta-title">
+                                <span>${getPriorityEmoji(alert.prioridad)}</span>
+                                <span class="priority-badge ${priorityClass}">${alert.prioridad}</span>
+                            </div>
+                            <div class="alerta-time">${tiempoAtrás}</div>
+                        </div>
+                        <div class="alerta-content">
+                            <div class="alerta-field">
+                                <span class="alerta-field-label">Dispositivo:</span>
+                                <span class="alerta-field-value">${alert.dispositivo}</span>
+                            </div>
+                            <div class="alerta-coords">
+                                <div class="alerta-field">
+                                    <span class="alerta-field-label">Ubicación:</span>
+                                    <span class="alerta-field-value">
+                                        ${alert.coordenadas.lat?.toFixed(6) || 'N/A'}, ${alert.coordenadas.lon?.toFixed(6) || 'N/A'}
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="alerta-field">
+                                <span class="alerta-field-label">Hora:</span>
+                                <span class="alerta-field-value">${recibidoEn.toLocaleString('es-MX')}</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function getPriorityEmoji(priority) {
+            const emojis = {
+                'crítica': '🔴',
+                'critica': '🔴',
+                'alta': '🟠',
+                'media': '🟡',
+                'baja': '🟢'
+            };
+            return emojis[priority?.toLowerCase()] || '⚪';
+        }
+
+        function getTimeAgo(date) {
+            const now = new Date();
+            const seconds = Math.floor((now - date) / 1000);
+
+            if (seconds < 60) return 'Hace poco';
+            const minutes = Math.floor(seconds / 60);
+            if (minutes < 60) return `Hace ${minutes}m`;
+            const hours = Math.floor(minutes / 60);
+            if (hours < 24) return `Hace ${hours}h`;
+            const days = Math.floor(hours / 24);
+            return `Hace ${days}d`;
+        }
+
+        // ===== WEBSOCKET =====
+        function connectWebSocket() {
+            if (ws) return;
+
+            ws = new WebSocket('ws://localhost:3004');
+
+            ws.onopen = () => {
+                console.log('WebSocket conectado');
+                statusBadge.classList.remove('disconnected');
+                statusBadge.classList.add('connected');
+                statusText.textContent = '🟢 Conectado';
+                clearTimeout(wsReconnectTimeout);
+            };
+
+            ws.onclose = () => {
+                console.log('WebSocket desconectado');
+                ws = null;
+                statusBadge.classList.remove('connected');
+                statusBadge.classList.add('disconnected');
+                statusText.textContent = '🔴 Desconectado';
+                wsReconnectTimeout = setTimeout(connectWebSocket, WS_RECONNECT_INTERVAL);
+            };
+
+            ws.onmessage = (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+                    addAlert(data);
+                } catch (err) {
+                    console.error('Error parsing message:', err);
+                }
+            };
+
+            ws.onerror = (error) => {
+                console.error('WebSocket error:', error);
+                statusBadge.classList.remove('connected');
+                statusBadge.classList.add('disconnected');
+                statusText.textContent = '🔴 Error de conexión';
+            };
+        }
+
+        // ===== INIT =====
+        document.addEventListener('DOMContentLoaded', () => {
+            loadFromStorage();
+            connectWebSocket();
+        });
+
+        // Reconectar al cerrar sesión/cambiar tab
+        window.addEventListener('beforeunload', () => {
+            if (ws) ws.close();
+        });
     </script>
 </body>
 </html>

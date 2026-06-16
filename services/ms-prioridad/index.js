@@ -42,15 +42,16 @@ async function procesarAlertas() {
 
   while (true) {
     try {
-      const item = await redisClient.blPop(IN_QUEUE, 0);
+      // blPop con timeout corto (1 segundo) para mejor responsividad
+      const item = await redisClient.blPop(IN_QUEUE, 1);
       if (!item) continue;
 
       const alerta = JSON.parse(item.element);
-      console.log(`[Worker] Alerta recibida para priorización: ${alerta.ID_dispositivo}`);
+      console.log(`[Worker] Alerta recibida para priorización: ${alerta.ID_dispositivo} (ID: ${alerta.alert_id || 'N/A'})`);
 
       // Priorizar (modelo de negocio)
       const alertaPriorizada = priorizarAlerta(alerta);
-      console.log(`[Worker] Prioridad '${alertaPriorizada.prioridad}' asignada a ${alerta.ID_dispositivo}`);
+      console.log(`[Worker] ✓ Prioridad '${alertaPriorizada.prioridad}' asignada a ${alerta.ID_dispositivo}`);
 
       // Encolar para el siguiente microservicio
       await redisClient.rPush(OUT_QUEUE, JSON.stringify(alertaPriorizada));
@@ -58,7 +59,8 @@ async function procesarAlertas() {
 
     } catch (err) {
       console.error('[Worker] Error al procesar alerta:', err.message);
-      await new Promise((res) => setTimeout(res, 1000));
+      // Reintento rápido: 100ms en lugar de 1s
+      await new Promise((res) => setTimeout(res, 100));
     }
   }
 }

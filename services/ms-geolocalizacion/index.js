@@ -42,23 +42,24 @@ async function procesarAlertas() {
 
   while (true) {
     try {
-      // blPop bloquea hasta recibir un elemento (timeout 0 = indefinido)
-      const item = await redisClient.blPop(IN_QUEUE, 0);
+      // blPop con timeout corto para mejor responsividad (1 segundo)
+      const item = await redisClient.blPop(IN_QUEUE, 1);
       if (!item) continue;
 
       const alerta = JSON.parse(item.element);
-      console.log(`[Worker] Alerta recibida: ${alerta.ID_dispositivo}`);
+      console.log(`[Worker] Alerta recibida: ${alerta.ID_dispositivo} (ID: ${alerta.alert_id || 'N/A'})`);
 
       // Enriquecer con geolocalización (modelo)
       const alertaEnriquecida = await enriquecerConGeo(alerta);
 
       // Encolar para el siguiente microservicio
       await redisClient.rPush(OUT_QUEUE, JSON.stringify(alertaEnriquecida));
-      console.log(`[Worker] Alerta ${alerta.ID_dispositivo} encolada en '${OUT_QUEUE}'.`);
+      console.log(`[Worker] ✓ Alerta ${alerta.ID_dispositivo} encolada en '${OUT_QUEUE}'.`);
 
     } catch (err) {
       console.error('[Worker] Error al procesar alerta:', err.message);
-      await new Promise((res) => setTimeout(res, 1000));
+      // Reintento rápido: 100ms en lugar de 1s
+      await new Promise((res) => setTimeout(res, 100));
     }
   }
 }

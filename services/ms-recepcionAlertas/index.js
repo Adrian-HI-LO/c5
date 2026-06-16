@@ -20,6 +20,8 @@ const REDIS_HOST = process.env.REDIS_HOST || 'localhost';
 const REDIS_PORT = process.env.REDIS_PORT || 6379;
 const MQTT_TOPIC = 'alertas';
 const REDIS_QUEUE = 'alertas_queue';
+const DEDUP_KEY = 'alertas_dedup_ids'; // SET de Redis para deduplicación
+const DEDUP_TTL = 3600; // 1 hora - tiempo de vida para evitar duplicados
 
 // --- Clientes ---
 const mqttClient = mqtt.connect(MQTT_URL);
@@ -64,9 +66,26 @@ mqttClient.on('message', async (topic, message) => {
       return;
     }
 
+    // Deduplicación: generar ID único si no existe
+    const alertId = payload.alert_id || `${payload.ID_dispositivo}-${payload.timestamp_ms || payload.timestamp}`;
+    
+    // Verificar si ya procesamos esta alerta
+    const yaExiste = await redisClient.sIsMember(DEDUP_KEY, alertId);
+    if (yaExiste) {
+      console.warn(`[MQTT] Alerta duplicada descartada: ${alertId}`);
+      return;
+    }
+
     const alertaNormalizada = normalizarAlerta(payload);
+    alertaNormalizada.alert_id = alertId; // Preservar ID para la cadena
+
+    // Marcar como procesada en el SET de deduplicación
+    await redisClient.sAdd(DEDUP_KEY, alertId);
+    await redisClient.expire(DEDUP_KEY, DEDUP_TTL);
+
+    // Encolar la alerta
     await redisClient.rPush(REDIS_QUEUE, JSON.stringify(alertaNormalizada));
-    console.log(`[Redis] Alerta de ${alertaNormalizada.ID_dispositivo} encolada en '${REDIS_QUEUE}'.`);
+    console.log(`[Redis] Alerta ${alertId} de ${alertaNormalizada.ID_dispositivo} encolada en '${REDIS_QUEUE}'.`);
 
   } catch (err) {
     console.error('[MQTT] Error al procesar mensaje:', err.message);

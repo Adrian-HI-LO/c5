@@ -73,34 +73,35 @@ async function procesarAlertas() {
 
   while (true) {
     try {
-      const item = await redisClient.blPop(IN_QUEUE, 0);
+      // blPop con timeout de 0.5s para máxima responsividad
+      const item = await redisClient.blPop(IN_QUEUE, 0.5);
       if (!item) continue;
 
       const alertaString = item.element;
       const alerta = JSON.parse(alertaString);
-      console.log(`[Worker] Alerta recibida: ${alerta.ID_dispositivo} | Prioridad: ${alerta.prioridad}`);
+      console.log(`[Worker] ⚡ Alerta recibida: ${alerta.ID_dispositivo} | Prioridad: ${alerta.prioridad} | ID: ${alerta.alert_id || 'N/A'}`);
 
-      // 1. Notificar operadores vía WebSocket
+      // 1. Notificar operadores vía WebSocket (PRIORITARIO)
       const notificados = broadcast(wss, alerta);
       if (notificados > 0) {
-        console.log(`[Worker] Alerta enviada a ${notificados} operadores vía WebSocket.`);
+        console.log(`[Worker] ✓ Alerta enviada a ${notificados} operador(es) vía WebSocket.`);
       } else {
-        console.warn(`[Worker] Sin operadores conectados. Encolando en 'failed_notifications_queue'.`);
+        console.warn(`[Worker] ⚠ Sin operadores conectados. Encolando para reintentos.`);
         await encolarFallida(redisClient, alertaString);
       }
 
-      // 2. Persistir en ms-historial vía gRPC (canal principal)
+      // 2. Persistir en ms-historial vía gRPC (no bloquea si falla)
       try {
         await registrarAlertaGrpc(alerta);
       } catch (grpcErr) {
-        console.warn(`[Worker] gRPC falló (${grpcErr.message}). Usando cola Redis como fallback.`);
-        // Fallback: encolar en Redis para que ms-historial lo consuma por su worker Redis
+        console.warn(`[Worker] ⚠ gRPC falló (${grpcErr.message}). Usando cola Redis como fallback.`);
         await redisClient.rPush(HISTORIAL_QUEUE, alertaString);
       }
 
     } catch (err) {
       console.error('[Worker] Error al procesar alerta:', err.message);
-      await new Promise((res) => setTimeout(res, 1000));
+      // Reintento muy rápido en caso de error
+      await new Promise((res) => setTimeout(res, 50));
     }
   }
 }
