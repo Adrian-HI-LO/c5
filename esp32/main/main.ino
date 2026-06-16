@@ -1,30 +1,6 @@
 /*
  * ============================================================
- * ESP32 - Botón de Pánico - Sistema C5 Alerta Ciudadana
- * ============================================================
- * 
- * Descripción:
- *   Este firmware permite al ESP32 actuar como dispositivo
- *   de alerta ciudadana. Al presionar el botón de pánico,
- *   captura las coordenadas GPS (simuladas o reales) y
- *   publica una alerta vía MQTT al broker del sistema C5.
- *
- * Hardware requerido:
- *   - ESP32 (cualquier variante: ESP32 DevKit, WROOM, etc.)
- *   - Botón pulsador (momentáneo, NO)
- *   - LED de estado (opcional)
- *   - Resistencia 10kΩ (pull-down para el botón)
- *
- * Conexiones:
- *   - Botón  → GPIO 14 (con pull-up interno activado)
- *   - LED    → GPIO 2  (LED integrado en la mayoría de placas)
- *   - GND    → GND
- *
- * Librerías requeridas (instalar en Arduino IDE):
- *   - WiFi.h          (incluida con el soporte ESP32)
- *   - PubSubClient    (Nick O'Leary) - Instalar desde Library Manager
- *   - ArduinoJson     (Benoit Blanchon) - Instalar desde Library Manager
- *
+ * ESP32 - Botón de Pánico - Sistema C5 Alerta Ciudadana (CORREGIDO)
  * ============================================================
  */
 
@@ -37,33 +13,18 @@
 // ============================================================
 
 // Red WiFi
-const char* WIFI_SSID     = "Nothing_11";       // Nombre de tu red WiFi
-const char* WIFI_PASSWORD = "12345678";    // Contraseña de tu red WiFi
+const char* WIFI_SSID     = "Nothing_11";       
+const char* WIFI_PASSWORD = "12345678";    
 
-// Broker MQTT (IP de la máquina donde corre Docker)
-// Si Docker está en la misma red, usa la IP local de esa máquina.
-// Ejemplo: "192.168.1.100"
-const char* MQTT_SERVER   = "10.252.169.28";       // ← CAMBIAR por tu IP
+// Broker MQTT
+const char* MQTT_SERVER   = "10.213.95.28";       
 const int   MQTT_PORT     = 1883;
 const char* MQTT_TOPIC    = "alertas";
 
 // Identificador único del dispositivo
-// Cambiar por un ID único por dispositivo (ej: número de serie, MAC)
 const char* DEVICE_ID     = "ESP32-001";
-// --- Variables para contar pulsaciones del botón ---
-int contadorPulsaciones = 0;
-unsigned long ultimoTiempoBoton = 0;
-const unsigned long TIEMPO_ESPERA_CLICS = 800; // 800 milisegundos para esperar más clics
-bool evaluandoClics = false;
 
-// Tipo de emergencia que enviará este dispositivo
-// Opciones: "incendio", "robo", "asalto", "emergencia médica",
-//           "accidente grave", "panico", "actividad sospechosa", "otro"
-const char* TIPO_EMERGENCIA = "panico";
-
-// Coordenadas GPS del dispositivo
-// Si tienes módulo GPS (ej: NEO-6M), reemplaza estas por lecturas reales.
-// Coordenadas de ejemplo: Ciudad de México, CDMX
+// Coordenadas GPS estáticas del dispositivo (CDMX)
 const float LAT_DISPOSITIVO = 19.432608;
 const float LON_DISPOSITIVO = -99.133209;
 
@@ -71,14 +32,14 @@ const float LON_DISPOSITIVO = -99.133209;
 // PINES GPIO
 // ============================================================
 const int PIN_BOTON = 14;   // GPIO del botón de pánico
-const int PIN_LED   = 2;    // LED de estado (integrado en la placa)
+const int PIN_LED   = 2;    // LED integrado en la placa
 
 // ============================================================
 // CONSTANTES DEL SISTEMA
 // ============================================================
-const unsigned long DEBOUNCE_MS       = 200;   // Anti-rebote del botón (ms)
-const unsigned long RETRY_INTERVAL_MS = 5000;  // Intervalo de reintento MQTT (ms)
-const unsigned long LED_BLINK_MS      = 100;   // Duración del parpadeo LED (ms)
+const unsigned long TIEMPO_ESPERA_CLICS = 800; // Ventana de tiempo para acumular clics (ms)
+const unsigned long RETRY_INTERVAL_MS   = 5000; // Reintento MQTT (ms)
+const unsigned long LED_BLINK_MS        = 100;  // Parpadeo LED (ms)
 
 // ============================================================
 // VARIABLES GLOBALES
@@ -86,29 +47,27 @@ const unsigned long LED_BLINK_MS      = 100;   // Duración del parpadeo LED (ms
 WiFiClient   espClient;
 PubSubClient mqttClient(espClient);
 
-volatile bool botonPresionado  = false;  // Flag de interrupción del botón
-unsigned long ultimoTimboton   = 0;      // Timestamp del último press (debounce)
-unsigned long ultimoReintento  = 0;      // Timestamp del último intento MQTT
+// Variables para el JSON (¡Añadidas para que compile!)
+StaticJsonDocument<256> doc;
+char buffer[256];
 
-// ============================================================
-// ISR - Interrupción del botón de pánico
-// ============================================================
-void IRAM_ATTR isrBoton() {
-  unsigned long ahora = millis();
-  if (ahora - ultimoTimboton > DEBOUNCE_MS) {
-    botonPresionado = true;
-    ultimoTimboton  = ahora;
-  }
-}
+// Variables para el control de clics por software (eliminamos interrupción conflictiva)
+int contadorPulsaciones = 0;
+unsigned long ultimoTiempoBoton = 0;
+bool evaluandoClics = false;
+bool ultimoEstadoBoton = HIGH; 
+unsigned long ultimoTiempoDebounce = 0;
+const unsigned long DEBOUNCE_DELAY = 50; // 50ms para evitar rebotes físicos
+
+unsigned long ultimoReintento = 0;      
 
 // ============================================================
 // FUNCIONES DE CONEXIÓN
 // ============================================================
 
-/**
- * Conecta al WiFi. Bloquea hasta conseguir conexión.
- */
 void conectarWifi() {
+  if (WiFi.status() == WL_CONNECTED) return;
+  
   Serial.printf("[WiFi] Conectando a '%s'", WIFI_SSID);
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
 
@@ -121,10 +80,6 @@ void conectarWifi() {
   Serial.printf("[WiFi] Conectado! IP: %s\n", WiFi.localIP().toString().c_str());
 }
 
-/**
- * Intenta conectar/reconectar al broker MQTT.
- * @return true si se conectó exitosamente.
- */
 bool conectarMqtt() {
   if (mqttClient.connected()) return true;
 
@@ -139,7 +94,6 @@ bool conectarMqtt() {
 
   if (conectado) {
     Serial.println("[MQTT] Conectado al broker!");
-    // Parpadear LED para confirmar conexión
     for (int i = 0; i < 3; i++) {
       digitalWrite(PIN_LED, HIGH);
       delay(LED_BLINK_MS);
@@ -147,8 +101,7 @@ bool conectarMqtt() {
       delay(LED_BLINK_MS);
     }
   } else {
-    Serial.printf("[MQTT] Fallo. Código: %d. Reintentando en %lus...\n",
-                  mqttClient.state(), RETRY_INTERVAL_MS / 1000);
+    Serial.printf("[MQTT] Fallo. Código: %d. Reintentando...\n", mqttClient.state());
   }
 
   return conectado;
@@ -158,34 +111,34 @@ bool conectarMqtt() {
 // FUNCIÓN PRINCIPAL: PUBLICAR ALERTA
 // ============================================================
 
-/**
- * Construye y publica el JSON de alerta en el topic MQTT.
- */
 void publicarAlerta(int clics) {
-  // Limpiamos memoria del JSON
   doc.clear();
   
-  // 1 clic = critica, 2 clics = alta, 3+ clics = baja
+  // Asignación de prioridad según tus requerimientos
   String prioridadAsignada;
   if(clics == 1) prioridadAsignada = "crítica";
   else if(clics == 2) prioridadAsignada = "alta";
   else prioridadAsignada = "baja";
 
-  doc["ID_dispositivo"]  = DEVICE_ID;
-  
-  // Enviamos nuestra prioridad en lugar de "tipo_emergencia"
-  doc["prioridad"] = prioridadAsignada; 
+  doc["ID_dispositivo"] = DEVICE_ID;
+  doc["prioridad"]      = prioridadAsignada; 
   
   JsonObject coords = doc.createNestedObject("coordenadas");
-  coords["lat"] = currentLat;
-  coords["lon"] = currentLon;
-  doc["timestamp"] = obtenerTimestampISO();
+  coords["lat"] = LAT_DISPOSITIVO; // Corregido con la variable global correcta
+  coords["lon"] = LON_DISPOSITIVO; // Corregido con la variable global correcta
+  
+  // Nota: Al no haber servidor NTP activo, enviamos el tiempo activo en milisegundos
+  doc["timestamp_ms"] = millis(); 
 
-  // El resto queda igual, para publicar
   size_t n = serializeJson(doc, buffer, sizeof(buffer));
   bool publicado = mqttClient.publish(MQTT_TOPIC, buffer, n);
+  
   if (publicado) {
     Serial.printf("[MQTT] ✓ Alerta %s publicada (%d clics)\n", prioridadAsignada.c_str(), clics);
+    // Feedback visual: destello largo al enviar exitosamente
+    digitalWrite(PIN_LED, HIGH);
+    delay(500);
+    digitalWrite(PIN_LED, LOW);
   } else {
     Serial.println("[MQTT] ✗ Error al publicar la alerta.");
   }
@@ -201,22 +154,14 @@ void setup() {
   Serial.println("\n============================================");
   Serial.println("  Sistema C5 - Botón de Pánico ESP32");
   Serial.println("============================================");
-  Serial.printf("  Dispositivo ID : %s\n", DEVICE_ID);
-  Serial.printf("  Tipo emergencia: %s\n", TIPO_EMERGENCIA);
-  Serial.printf("  Coordenadas    : (%.6f, %.6f)\n", LAT_DISPOSITIVO, LON_DISPOSITIVO);
-  Serial.println("============================================\n");
 
-  // Configurar pines
   pinMode(PIN_LED, OUTPUT);
   digitalWrite(PIN_LED, LOW);
 
-  pinMode(PIN_BOTON, INPUT_PULLUP);
-  attachInterrupt(digitalPinToInterrupt(PIN_BOTON), isrBoton, FALLING);
+  // Configuración crucial para tu conexión: resistencia Pull-Up interna activada
+  pinMode(PIN_BOTON, INPUT_PULLUP); 
 
-  // Conectar WiFi
   conectarWifi();
-
-  // Configurar cliente MQTT
   mqttClient.setServer(MQTT_SERVER, MQTT_PORT);
   mqttClient.setKeepAlive(60);
 
@@ -228,29 +173,48 @@ void setup() {
 // ============================================================
 void loop() {
   if (WiFi.status() != WL_CONNECTED) conectarWifi();
-  if (!conectarMqtt()) {
-    delay(5000);
-    return;
+  
+  if (!mqttClient.connected()) {
+    conectarMqtt();
+    return; // Si no hay MQTT, no procesamos clicks para evitar pérdidas
   }
   mqttClient.loop();
 
-  // ----- LECTURA MANUAL DE BOTÓN (sin interrupción) -----
-  // Asumiendo botón en modo PULL-UP (LOW significa presionado)
-  bool estadoBoton = digitalRead(PIN_BOTON) == LOW; 
-  
-  if (estadoBoton) {
-    delay(150); // anti-rebote básico min
-    contadorPulsaciones++;
-    evaluandoClics = true;
-    ultimoTiempoBoton = millis();
-    while(digitalRead(PIN_BOTON) == LOW) { delay(10); } // esperar que suelte
+  // ---- LÓGICA DE DEBOUNCE Y DETECCIÓN DE CLICS ----
+  int lectura = digitalRead(PIN_BOTON);
+
+  // Si el botón cambió de estado (por ruido o presión)
+  if (lectura != ultimoEstadoBoton) {
+    ultimoTiempoDebounce = millis();
   }
 
-  // Si pasaron 800ms desde el último clic y hay clics registrados, enviar!
+  if ((millis() - ultimoTiempoDebounce) > DEBOUNCE_DELAY) {
+    // Si el estado ha sido estable y es LOW significa que fue presionado realmente
+    if (lectura == LOW && evaluandoClics == false) {
+      contadorPulsaciones++;
+      evaluandoClics = true;
+      ultimoTiempoBoton = millis();
+      Serial.printf("[Botón] Clic detectado (%d)\n", contadorPulsaciones);
+      
+      // Esperar de forma segura a que se suelte el botón para no registrar múltiples clicks continuos
+      while(digitalRead(PIN_BOTON) == LOW) { delay(10); } 
+    }
+    else if (lectura == LOW && evaluandoClics == true) {
+      // Sumar clics adicionales dentro de la ventana de tiempo
+      contadorPulsaciones++;
+      ultimoTiempoBoton = millis();
+      Serial.printf("[Botón] Clic adicional detectado (%d)\n", contadorPulsaciones);
+      while(digitalRead(PIN_BOTON) == LOW) { delay(10); }
+    }
+  }
+
+  ultimoEstadoBoton = lectura;
+
+  // Si ya terminó el tiempo de espera (800ms) desde el último clic, enviamos el paquete
   if (evaluandoClics && (millis() - ultimoTiempoBoton > TIEMPO_ESPERA_CLICS)) {
       publicarAlerta(contadorPulsaciones);
       
-      // Reiniciar para la siguiente
+      // Reiniciar variables para la siguiente ráfaga de clics
       contadorPulsaciones = 0;
       evaluandoClics = false;
   }

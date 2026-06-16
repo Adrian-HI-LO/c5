@@ -41,10 +41,13 @@ function validarAlerta(alerta) {
     }
   }
 
-  if (!alerta.timestamp) {
-    errores.push('Campo "timestamp" es requerido.');
-  } else if (isNaN(Date.parse(alerta.timestamp))) {
+  // Aceptar timestamp (ISO 8601) o timestamp_ms (milisegundos Unix)
+  if (!alerta.timestamp && !alerta.timestamp_ms) {
+    errores.push('Campo "timestamp" (ISO 8601) o "timestamp_ms" (milisegundos) es requerido.');
+  } else if (alerta.timestamp && isNaN(Date.parse(alerta.timestamp))) {
     errores.push('Campo "timestamp" debe ser una fecha ISO 8601 válida.');
+  } else if (alerta.timestamp_ms && !Number.isInteger(alerta.timestamp_ms)) {
+    errores.push('Campo "timestamp_ms" debe ser un número entero (milisegundos Unix).');
   }
 
   if (!alerta.prioridad || typeof alerta.prioridad !== 'string') {
@@ -58,16 +61,22 @@ function validarAlerta(alerta) {
 }
 
 /**
- * Normaliza una alerta (recorta strings, convierte tipo a minúsculas).
+ * Normaliza una alerta (recorta strings, convierte tipo a minúsculas, timestamp a ISO 8601).
  * @param {Object} alerta
  * @returns {Object} alerta normalizada
  */
 function normalizarAlerta(alerta) {
+  // Convertir timestamp_ms a ISO 8601 si es necesario
+  let timestamp = alerta.timestamp;
+  if (!timestamp && alerta.timestamp_ms) {
+    timestamp = new Date(alerta.timestamp_ms).toISOString();
+  }
+
   return {
     ...alerta,
     ID_dispositivo: alerta.ID_dispositivo.trim(),
     prioridad: alerta.prioridad.trim().toLowerCase(),
-    timestamp: alerta.timestamp,
+    timestamp: timestamp,
     coordenadas: {
       lat: Number(alerta.coordenadas.lat),
       lon: Number(alerta.coordenadas.lon),
