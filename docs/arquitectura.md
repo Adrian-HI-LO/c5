@@ -21,6 +21,7 @@ El Sistema C5 es una infraestructura distribuida de alerta ciudadana compuesta p
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │   BROKER MQTT - Eclipse Mosquitto :1883                                     │
 │   (docker: mqtt-broker)                                                     │
+│   Shared subscription: $share/recepcion_alertas/alertas                    │
 └────────┬────────────────────────────────────────────────────────────────────┘
          │
          ▼ MQTT subscribe
@@ -181,8 +182,9 @@ ms-recepcionAlertas/
 
 1. **Cola de notificaciones fallidas**: Si no hay operadores WebSocket conectados, la alerta se encola en `failed_notifications_queue` y se reintenta cada 5 segundos.
 2. **Fallback gRPC → Redis**: Si el servidor gRPC de ms-historial no está disponible, ms-notificaciones encola en `historial_queue` para que ms-historial la consuma al recuperarse.
-3. **3 instancias de recepción**: Nginx distribuye carga entre 3 instancias del ms-recepcionAlertas, garantizando que ninguna alerta MQTT se pierda.
-4. **Replicación PostgreSQL**: El maestro replica en streaming a la réplica; si la réplica cae, las lecturas fallan sin afectar las escrituras.
+3. **3 instancias de recepción**: El broker MQTT reparte las alertas con *shared subscriptions* entre 3 instancias de `ms-recepcionAlertas`; Nginx se mantiene para tráfico HTTP.
+4. **Geolocalización con timeout**: Si OpenStreetMap tarda demasiado, el sistema sigue con la alerta sin bloquear el envío en tiempo real.
+5. **Replicación PostgreSQL**: El maestro replica en streaming a la réplica; si la réplica cae, las lecturas fallan sin afectar las escrituras.
 
 ---
 

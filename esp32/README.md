@@ -1,247 +1,372 @@
-# ESP32 - Botón de Pánico · Sistema C5 Alerta Ciudadana
+/*
+ * ============================================================
+ * ESP32 - Botón de Pánico + GPS NEO-6M - Sistema C5 Alerta Ciudadana
+ * ============================================================
+ * 
+ * Librerías requeridas (instalar desde Arduino Library Manager):
+ *   - PubSubClient  (Nick O'Leary)
+ *   - ArduinoJson   (Benoit Blanchon)
+ *   - TinyGPS++     (Mikal Hart)
+ * 
+ * Conexión GPS NEO-6M → ESP32:
+ *   GPS TX  → GPIO 16 (RX2 del ESP32)
+ *   GPS RX  → GPIO 17 (TX2 del ESP32)  [opcional, solo para configurar]
+ *   GPS VCC → 3.3V o 5V
+ *   GPS GND → GND
+ */
 
-Este documento describe el hardware, las conexiones eléctricas y los pasos para programar el ESP32 que actúa como dispositivo de alerta ciudadana.
-
----
-
-## Componentes Necesarios
-
-| Componente | Cantidad | Descripción |
-|---|---|---|
-| ESP32 DevKit | 1 | Cualquier variante (WROOM-32, WROVER, etc.) |
-| Botón pulsador | 1 | Momentáneo, contacto normalmente abierto (NO) |
-| LED (opcional) | 1 | Para indicador visual de estado |
-| Resistencia 220Ω | 1 | Para el LED (si es externo) |
-| Protoboard | 1 | Para el montaje |
-| Cables jumper | varios | Para las conexiones |
-| Cable USB | 1 | Para programar el ESP32 |
-
----
-
-## Diagrama de Conexiones
-
-```
-ESP32                    Componentes
-─────────────────────────────────────────────────────
-GPIO 14  ──────────────── [Botón] ──── GND
-           (INPUT_PULLUP)
-                                                     
-GPIO 2   ──── [220Ω] ──── [LED+] ──── LED- ──── GND
-         (LED integrado en la mayoría de placas)
-                          
-3.3V / 5V ─────────────── VIN (alimentación placa)
-GND       ─────────────── GND
-```
-
-### Botón de Pánico - Detalle
-
-```
-GPIO 14 ─────┬──── [Botón pulsador] ──── GND
-             │
-          (Pull-Up interno activado en el firmware)
-          Sin resistencia externa necesaria.
-```
-
-**Nota**: El firmware usa `INPUT_PULLUP`, por lo que el botón conecta `GPIO14` a `GND` al presionar (lógica inversa). Esto ya está manejado con `FALLING` en la interrupción.
-
----
-
-## Instalación del Entorno Arduino
-
-### Paso 1: Instalar Arduino IDE
-
-Descarga Arduino IDE 2.x desde: https://www.arduino.cc/en/software
-
-### Paso 2: Agregar soporte para ESP32
-
-1. Abrir Arduino IDE → **Archivo → Preferencias**
-2. En "URLs adicionales para el Gestor de Placas", agregar:
-   ```
-   https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json
-   ```
-3. Ir a **Herramientas → Placa → Gestor de Placas**
-4. Buscar `esp32` e instalar **"esp32 by Espressif Systems"** (versión 2.x o superior)
-
-### Paso 3: Seleccionar la placa
-
-- **Herramientas → Placa → ESP32 Arduino → ESP32 Dev Module**
-
-### Paso 4: Instalar librerías necesarias
-
-Ir a **Herramientas → Administrar Librerías** e instalar:
-
-| Librería | Autor | Para qué sirve |
-|---|---|---|
-| **PubSubClient** | Nick O'Leary | Cliente MQTT |
-| **ArduinoJson** | Benoit Blanchon | Serialización JSON |
-
----
-
-## Configuración del Firmware
-
-Abrir el archivo `main/main.ino` y modificar las siguientes constantes al inicio:
-
-```cpp
-// ── Tu red WiFi ──────────────────────────────────────
-const char* WIFI_SSID     = "NOMBRE_DE_TU_RED";
-const char* WIFI_PASSWORD = "TU_CONTRASEÑA";
-
-// ── IP del servidor donde corre Docker ───────────────
-// Usa: ipconfig (Windows) o ip addr (Linux) para encontrarla
-const char* MQTT_SERVER   = "192.168.1.100";   // ← CAMBIAR
-
-// ── Identificador único del dispositivo ──────────────
-const char* DEVICE_ID     = "ESP32-001";        // ← CAMBIAR por dispositivo
-
-// ── Tipo de emergencia de este dispositivo ───────────
-const char* TIPO_EMERGENCIA = "panico";
-
-// ── Coordenadas fijas del dispositivo (si sin GPS) ───
-const float LAT_DISPOSITIVO = 19.432608;
-const float LON_DISPOSITIVO = -99.133209;
-```
-
-### Cómo encontrar la IP de tu máquina con Docker
-
-**Windows (PowerShell):**
-```powershell
-ipconfig
-# Busca "Adaptador de Ethernet" o "Adaptador Wi-Fi" → Dirección IPv4
-```
-
-**Linux/macOS:**
-```bash
-ip addr show | grep "inet "
-# o
-hostname -I
-```
-
----
-
-## Programar el ESP32
-
-1. Conectar el ESP32 via USB a tu computadora
-2. En Arduino IDE → **Herramientas → Puerto** → seleccionar el puerto COM del ESP32
-   - Windows: `COM3`, `COM4`, etc.
-   - Linux: `/dev/ttyUSB0` o `/dev/ttyACM0`
-3. Configurar velocidad de upload si es necesario: **Herramientas → Upload Speed → 115200**
-4. Clic en **→ Subir** (flecha derecha) o `Ctrl+U`
-
----
-
-## Verificar el Funcionamiento
-
-### 1. Monitor Serie
-
-Abrir **Herramientas → Monitor Serie** (baudios: `115200`).
-
-Al arrancar verás:
-```
-============================================
-  Sistema C5 - Botón de Pánico ESP32
-============================================
-  Dispositivo ID : ESP32-001
-  Tipo emergencia: panico
-  Coordenadas    : (19.432608, -99.133209)
-============================================
-
-[WiFi] Conectando a 'MI_RED'...
-[WiFi] Conectado! IP: 192.168.1.150
-[MQTT] Conectando a 192.168.1.100:1883...
-[MQTT] Conectado al broker!
-[Sistema] Listo. Presiona el botón para enviar una alerta.
-```
-
-### 2. Al presionar el botón
-
-```
-[BOTÓN] ¡Botón de pánico presionado!
-[MQTT] ✓ Alerta publicada en topic 'alertas':
-{"ID_dispositivo":"ESP32-001","timestamp":"2024-01-01T00:01:23.456Z","tipo_emergencia":"panico","coordenadas":{"lat":19.432608,"lon":-99.133209}}
-```
-
-### 3. Verificar en el sistema C5
-
-El sistema procesará automáticamente la alerta y:
-1. `ms-recepcion-alertas` → la valida y encola en Redis
-2. `ms-geolocalizacion` → obtiene la dirección de las coordenadas
-3. `ms-prioridad` → asigna nivel `crítica` (tipo `panico`)
-4. `ms-notificaciones` → envía a operadores vía WebSocket
-5. `ms-historial` → guarda en PostgreSQL vía gRPC
-
-Para confirmar, conectarse como operador:
-```
-ws://localhost:3004
-```
-
----
-
-## Solución de Problemas
-
-| Problema | Posible causa | Solución |
-|---|---|---|
-| No se conecta al WiFi | Credenciales incorrectas | Verificar SSID y contraseña |
-| `MQTT` código -2 | IP del broker incorrecta | Usar `ping` para verificar la IP |
-| `MQTT` código -4 | Firewall bloqueando puerto 1883 | Abrir puerto 1883 en el firewall |
-| LED no parpadea | Pin incorrecto | Cambiar `PIN_LED` al pin correcto de tu placa |
-| Alerta se envía doble | Rebote del botón | Ajustar `DEBOUNCE_MS` |
-| Puerto COM no aparece | Driver CH340/CP2102 faltante | Instalar el driver del chip USB del ESP32 |
-
-### Driver USB para ESP32
-
-- **CH340** (placas económicas): https://www.wch-ic.com/downloads/CH341SER_EXE.html
-- **CP2102** (Silicon Labs): https://www.silabs.com/developers/usb-to-uart-bridge-vcp-drivers
-
----
-
-## Estructura del Mensaje MQTT
-
-El ESP32 publica en el topic `alertas` el siguiente JSON:
-
-```json
-{
-  "ID_dispositivo": "ESP32-001",
-  "timestamp": "2024-01-01T00:01:23.456Z",
-  "tipo_emergencia": "panico",
-  "coordenadas": {
-    "lat": 19.432608,
-    "lon": -99.133209
-  }
-}
-```
-
-Este formato es validado por `ms-recepcionAlertas/models/alertaModel.js`.
-
----
-
-## Expansión con GPS Real (Opcional)
-
-Para usar un módulo GPS real (ej: **NEO-6M**):
-
-**Conexión NEO-6M → ESP32:**
-```
-NEO-6M TX  → ESP32 GPIO 16 (RX2)
-NEO-6M RX  → ESP32 GPIO 17 (TX2)
-NEO-6M VCC → 3.3V
-NEO-6M GND → GND
-```
-
-**Código adicional (reemplazar valores fijos):**
-```cpp
+#include <WiFi.h>
+#include <PubSubClient.h>
+#include <ArduinoJson.h>
+#include <MD5Builder.h>
 #include <TinyGPS++.h>
 #include <HardwareSerial.h>
 
-HardwareSerial gpsSerial(2);
-TinyGPSPlus gps;
+// ============================================================
+// CONFIGURACIÓN - MODIFICAR SEGÚN TU RED Y ENTORNO
+// ============================================================
 
+// Red WiFi
+const char* WIFI_SSID     = "INFINITUM06B5";
+const char* WIFI_PASSWORD = "zMU9gWRdMK";
+
+// Broker MQTT
+const char* MQTT_SERVER   = "192.168.1.74";
+const int   MQTT_PORT     = 1883;
+const char* MQTT_TOPIC    = "alertas";
+
+// ============================================================
+// IDENTIFICADOR DEL DISPOSITIVO
+// Cambia SOLO este valor entre los dos ESP32:
+//   Dispositivo 1: "ESP32-001"
+//   Dispositivo 2: "ESP32-002"
+// ============================================================
+const char* DEVICE_ID = "ESP32-001";
+
+// ============================================================
+// COORDENADAS DE RESPALDO (si el GPS no tiene fix)
+// Se usan únicamente si el módulo GPS no logra obtener señal
+// ============================================================
+const float LAT_FALLBACK = 19.432608;
+const float LON_FALLBACK = -99.133209;
+
+// ============================================================
+// PINES GPIO
+// ============================================================
+const int PIN_BOTON  = 14;   // GPIO del botón de pánico
+const int PIN_LED    = 2;    // LED integrado en la placa
+const int GPS_RX_PIN = 16;   // RX2 del ESP32 → TX del NEO-6M
+const int GPS_TX_PIN = 17;   // TX2 del ESP32 → RX del NEO-6M (opcional)
+const int GPS_BAUD   = 9600; // Velocidad estándar del NEO-6M
+
+// ============================================================
+// CONSTANTES DEL SISTEMA
+// ============================================================
+const unsigned long TIEMPO_ESPERA_CLICS  = 800;   // Ventana de tiempo para acumular clics (ms)
+const unsigned long RETRY_INTERVAL_MS    = 5000;  // Reintento MQTT (ms)
+const unsigned long LED_BLINK_MS         = 100;   // Parpadeo LED (ms)
+const unsigned long GPS_TIMEOUT_MS       = 15000; // Espera fix GPS al presionar botón (ms) - aumentado a 15s
+const unsigned long GPS_STATUS_INTERVAL  = 10000; // Reportar estado GPS en Serial cada 10s
+
+// ============================================================
+// OBJETOS GLOBALES
+// ============================================================
+WiFiClient   espClient;
+PubSubClient mqttClient(espClient);
+TinyGPSPlus  gps;
+HardwareSerial gpsSerial(2); // UART2 del ESP32
+
+// Buffer JSON
+StaticJsonDocument<300> doc;
+char buffer[300];
+
+// ============================================================
+// VARIABLES DE CONTROL DE BOTÓN
+// ============================================================
+int  contadorPulsaciones   = 0;
+unsigned long ultimoTiempoBoton    = 0;
+bool evaluandoClics        = false;
+bool ultimoEstadoBoton     = HIGH;
+unsigned long ultimoTiempoDebounce = 0;
+const unsigned long DEBOUNCE_DELAY = 50;
+
+unsigned long ultimoReintento   = 0;
+unsigned long ultimoStatusGPS   = 0; // Para reportar estado GPS periódicamente
+bool gpsFixAnterior             = false; // Para detectar cuando se gana el fix
+
+// ============================================================
+// FUNCIONES GPS
+// ============================================================
+
+/**
+ * Alimenta el parser de TinyGPS++ con los datos que lleguen
+ * del módulo GPS por Serial2.
+ */
+void alimentarGPS() {
+  while (gpsSerial.available() > 0) {
+    gps.encode(gpsSerial.read());
+  }
+}
+
+/**
+ * Obtiene las coordenadas GPS actuales.
+ * Espera hasta GPS_TIMEOUT_MS para conseguir un fix válido.
+ * Si no hay fix, devuelve las coordenadas de respaldo.
+ *
+ * @param latOut  Puntero donde se guardará la latitud
+ * @param lonOut  Puntero donde se guardará la longitud
+ * @param esReal  Puntero bool: true si son coordenadas GPS reales
+ */
+void obtenerCoordenadas(float* latOut, float* lonOut, bool* esReal) {
+  unsigned long inicio = millis();
+
+  Serial.print("[GPS] Esperando fix");
+
+  // Intentar obtener coordenadas frescas en el tiempo límite
+  while (millis() - inicio < GPS_TIMEOUT_MS) {
+    alimentarGPS();
+
+    if (gps.location.isValid() && gps.location.isUpdated()) {
+      *latOut = gps.location.lat();
+      *lonOut = gps.location.lng();
+      *esReal = true;
+      Serial.printf("\n[GPS] ✓ Fix obtenido: %.6f, %.6f (precisión HDOP: %.1f)\n",
+                    *latOut, *lonOut, gps.hdop.value() / 100.0);
+      return;
+    }
+    delay(50);
+    Serial.print(".");
+  }
+
+  // Si hay fix previo (aunque no se haya actualizado ahora), úsalo
+  if (gps.location.isValid()) {
+    *latOut = gps.location.lat();
+    *lonOut = gps.location.lng();
+    *esReal = true;
+    Serial.printf("\n[GPS] ✓ Fix previo usado: %.6f, %.6f\n", *latOut, *lonOut);
+    return;
+  }
+
+  // Sin fix disponible: usar coordenadas de respaldo
+  *latOut = LAT_FALLBACK;
+  *lonOut = LON_FALLBACK;
+  *esReal = false;
+  Serial.println("\n[GPS] ✗ Sin fix. Usando coordenadas de respaldo.");
+}
+
+// ============================================================
+// FUNCIONES DE CONEXIÓN
+// ============================================================
+
+void conectarWifi() {
+  if (WiFi.status() == WL_CONNECTED) return;
+
+  Serial.printf("[WiFi] Conectando a '%s'", WIFI_SSID);
+  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+
+  Serial.println();
+  Serial.printf("[WiFi] Conectado! IP: %s\n", WiFi.localIP().toString().c_str());
+}
+
+bool conectarMqtt() {
+  if (mqttClient.connected()) return true;
+
+  unsigned long ahora = millis();
+  if (ahora - ultimoReintento < RETRY_INTERVAL_MS) return false;
+  ultimoReintento = ahora;
+
+  Serial.printf("[MQTT] Conectando a %s:%d...\n", MQTT_SERVER, MQTT_PORT);
+
+  String clientId = String("ESP32-") + String(DEVICE_ID);
+  bool conectado = mqttClient.connect(clientId.c_str());
+
+  if (conectado) {
+    Serial.println("[MQTT] Conectado al broker!");
+    for (int i = 0; i < 3; i++) {
+      digitalWrite(PIN_LED, HIGH);
+      delay(LED_BLINK_MS);
+      digitalWrite(PIN_LED, LOW);
+      delay(LED_BLINK_MS);
+    }
+  } else {
+    Serial.printf("[MQTT] Fallo. Código: %d. Reintentando...\n", mqttClient.state());
+  }
+
+  return conectado;
+}
+
+// ============================================================
+// FUNCIÓN PRINCIPAL: PUBLICAR ALERTA
+// ============================================================
+
+String generarHashAlerta(int clics, unsigned long timestamp) {
+  String inputStr = String(DEVICE_ID) + "_" + String(timestamp) + "_" + String(clics);
+  MD5Builder md5;
+  md5.begin();
+  md5.add(inputStr.c_str());
+  md5.calculate();
+  return md5.toString().substring(0, 12);
+}
+
+void publicarAlerta(int clics) {
+  // 1. Obtener coordenadas GPS reales (o fallback)
+  float lat, lon;
+  bool gpsReal;
+  obtenerCoordenadas(&lat, &lon, &gpsReal);
+
+  // 2. Construir el JSON
+  doc.clear();
+
+  String prioridadAsignada;
+  if (clics == 1)      prioridadAsignada = "crítica";
+  else if (clics == 2) prioridadAsignada = "alta";
+  else                 prioridadAsignada = "baja";
+
+  unsigned long timestamp_ms = millis();
+  String alert_id = generarHashAlerta(clics, timestamp_ms);
+
+  doc["alert_id"]      = alert_id;
+  doc["ID_dispositivo"] = DEVICE_ID;
+  doc["prioridad"]     = prioridadAsignada;
+
+  JsonObject coords = doc.createNestedObject("coordenadas");
+  coords["lat"]  = serialized(String(lat, 6));   // 6 decimales de precisión
+  coords["lon"]  = serialized(String(lon, 6));
+  coords["gps_real"] = gpsReal;                  // indica si la fuente es GPS real
+
+  doc["timestamp_ms"] = timestamp_ms;
+
+  // 3. Publicar
+  size_t n = serializeJson(doc, buffer, sizeof(buffer));
+  bool publicado = mqttClient.publish(MQTT_TOPIC, buffer, n);
+
+  if (publicado) {
+    Serial.printf("[MQTT] ✓ Alerta '%s' publicada (ID: %s, %d clic(s), GPS: %s)\n",
+                  prioridadAsignada.c_str(), alert_id.c_str(), clics,
+                  gpsReal ? "REAL" : "FALLBACK");
+    // Feedback visual: destello largo al enviar exitosamente
+    digitalWrite(PIN_LED, HIGH);
+    delay(500);
+    digitalWrite(PIN_LED, LOW);
+  } else {
+    Serial.println("[MQTT] ✗ Error al publicar la alerta.");
+  }
+}
+
+// ============================================================
+// SETUP
+// ============================================================
 void setup() {
-  gpsSerial.begin(9600, SERIAL_8N1, 16, 17);
+  Serial.begin(115200);
+  delay(500);
+
+  Serial.println("\n============================================");
+  Serial.printf( "  Sistema C5 - Botón de Pánico + GPS\n");
+  Serial.printf( "  Dispositivo: %s\n", DEVICE_ID);
+  Serial.println("============================================");
+
+  pinMode(PIN_LED, OUTPUT);
+  digitalWrite(PIN_LED, LOW);
+  pinMode(PIN_BOTON, INPUT_PULLUP);
+
+  // Inicializar GPS por UART2
+  gpsSerial.begin(GPS_BAUD, SERIAL_8N1, GPS_RX_PIN, GPS_TX_PIN);
+  Serial.printf("[GPS] Módulo NEO-6M en GPIO RX=%d, TX=%d a %d bps\n",
+                GPS_RX_PIN, GPS_TX_PIN, GPS_BAUD);
+  Serial.println("[GPS] Esperando señal satelital... (puede tomar 1-3 min en exterior)");
+
+  conectarWifi();
+  mqttClient.setServer(MQTT_SERVER, MQTT_PORT);
+  mqttClient.setKeepAlive(60);
+
+  Serial.println("[Sistema] Listo. Presiona el botón para enviar una alerta.");
 }
 
-// En publicarAlerta():
-while (gpsSerial.available() > 0) {
-  gps.encode(gpsSerial.read());
+// ============================================================
+// LOOP PRINCIPAL
+// ============================================================
+void loop() {
+  // Alimentar el parser GPS continuamente (no bloquea)
+  alimentarGPS();
+
+  // ---- ESTADO GPS: reportar cada 10 seg y cuando cambia ----
+  bool gpsFixActual = gps.location.isValid();
+  unsigned long ahoraMs = millis();
+
+  if (gpsFixActual && !gpsFixAnterior) {
+    Serial.println("\n[GPS] FIX OBTENIDO! Ya puedes presionar el boton con coordenadas reales.");
+    Serial.printf("[GPS] Satelites: %d | Lat: %.6f | Lon: %.6f\n",
+                  gps.satellites.value(),
+                  gps.location.lat(),
+                  gps.location.lng());
+    gpsFixAnterior = true;
+  }
+
+  if (!gpsFixActual && gpsFixAnterior) {
+    Serial.println("[GPS] Fix perdido. Reacquiriendo satelites...");
+    gpsFixAnterior = false;
+  }
+
+  if (ahoraMs - ultimoStatusGPS > GPS_STATUS_INTERVAL) {
+    ultimoStatusGPS = ahoraMs;
+    if (gpsFixActual) {
+      Serial.printf("[GPS] Fix activo | Sat: %d | %.6f, %.6f\n",
+                    gps.satellites.value(),
+                    gps.location.lat(),
+                    gps.location.lng());
+    } else {
+      Serial.printf("[GPS] Buscando satelites... (chars: %lu, frases OK: %lu)\n",
+                    gps.charsProcessed(),
+                    gps.sentencesWithFix());
+      if (gps.charsProcessed() < 10) {
+        Serial.println("[GPS] ADVERTENCIA: Sin datos del modulo - verifica cable TX->GPIO16");
+      }
+    }
+  }
+
+  if (WiFi.status() != WL_CONNECTED) conectarWifi();
+
+  if (!mqttClient.connected()) {
+    conectarMqtt();
+    return;
+  }
+  mqttClient.loop();
+
+  // ---- LOGICA DE DEBOUNCE Y DETECCION DE CLICS ----
+  int lectura = digitalRead(PIN_BOTON);
+
+  if (lectura != ultimoEstadoBoton) {
+    ultimoTiempoDebounce = millis();
+  }
+
+  if ((millis() - ultimoTiempoDebounce) > DEBOUNCE_DELAY) {
+    if (lectura == LOW && evaluandoClics == false) {
+      contadorPulsaciones++;
+      evaluandoClics = true;
+      ultimoTiempoBoton = millis();
+      Serial.printf("[Boton] Clic %d | GPS: %s\n",
+                    contadorPulsaciones, gpsFixActual ? "REAL" : "SIN FIX (usara respaldo)");
+      while (digitalRead(PIN_BOTON) == LOW) { delay(10); }
+    } else if (lectura == LOW && evaluandoClics == true) {
+      contadorPulsaciones++;
+      ultimoTiempoBoton = millis();
+      Serial.printf("[Boton] Clic adicional (%d)\n", contadorPulsaciones);
+      while (digitalRead(PIN_BOTON) == LOW) { delay(10); }
+    }
+  }
+
+  ultimoEstadoBoton = lectura;
+
+  if (evaluandoClics && (millis() - ultimoTiempoBoton > TIEMPO_ESPERA_CLICS)) {
+    publicarAlerta(contadorPulsaciones);
+    contadorPulsaciones = 0;
+    evaluandoClics = false;
+  }
+
+  delay(10);
 }
-float lat = gps.location.lat();
-float lon = gps.location.lng();
-```

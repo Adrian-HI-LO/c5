@@ -29,6 +29,7 @@ const historialProto = grpc.loadPackageDefinition(packageDef).historial;
 const GRPC_HOST = process.env.GRPC_HISTORIAL_HOST || 'localhost';
 const GRPC_PORT = process.env.GRPC_HISTORIAL_PORT || 50051;
 const GRPC_ADDRESS = `${GRPC_HOST}:${GRPC_PORT}`;
+const GRPC_DEADLINE_MS = Number(process.env.GRPC_DEADLINE_MS || 700);
 
 // Crear el stub (cliente) gRPC
 const client = new historialProto.AlertaService(
@@ -65,7 +66,9 @@ function registrarAlertaGrpc(alerta) {
       prioridad: alerta.prioridad || 'media',
     };
 
-    client.RegistrarAlerta(request, (err, response) => {
+    const deadline = new Date(Date.now() + GRPC_DEADLINE_MS);
+
+    client.RegistrarAlerta(request, { deadline }, (err, response) => {
       if (err) {
         console.error('[gRPC Client] Error al registrar alerta:', err.message);
         reject(err);

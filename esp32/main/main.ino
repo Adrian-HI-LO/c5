@@ -38,9 +38,10 @@ const int PIN_LED   = 2;    // LED integrado en la placa
 // ============================================================
 // CONSTANTES DEL SISTEMA
 // ============================================================
-const unsigned long TIEMPO_ESPERA_CLICS = 800; // Ventana de tiempo para acumular clics (ms)
-const unsigned long RETRY_INTERVAL_MS   = 5000; // Reintento MQTT (ms)
+const unsigned long TIEMPO_ESPERA_CLICS = 350; // Ventana de tiempo para acumular clics (ms)
+const unsigned long RETRY_INTERVAL_MS   = 2000; // Reintento MQTT/WiFi (ms)
 const unsigned long LED_BLINK_MS        = 100;  // Parpadeo LED (ms)
+const uint8_t MAX_ALERTAS_PENDIENTES    = 5;
 
 // ============================================================
 // VARIABLES GLOBALES
@@ -61,28 +62,35 @@ unsigned long ultimoTiempoDebounce = 0;
 const unsigned long DEBOUNCE_DELAY = 50; // 50ms para evitar rebotes físicos
 
 unsigned long ultimoReintento = 0;      
+unsigned long ultimoReintentoWifi = 0;
+
+String alertasPendientes[MAX_ALERTAS_PENDIENTES];
+uint8_t indicePendienteInicio = 0;
+uint8_t indicePendienteFin = 0;
+uint8_t totalPendientes = 0;
 
 // ============================================================
 // FUNCIONES DE CONEXIÓN
 // ============================================================
 
-void conectarWifi() {
-  if (WiFi.status() == WL_CONNECTED) return;
-  
-  Serial.printf("[WiFi] Conectando a '%s'", WIFI_SSID);
+bool conectarWifi() {
+  if (WiFi.status() == WL_CONNECTED) return true;
+
+  unsigned long ahora = millis();
+  if (ahora - ultimoReintentoWifi < RETRY_INTERVAL_MS) return false;
+  ultimoReintentoWifi = ahora;
+
+  Serial.printf("[WiFi] Reintentando conexión a '%s'...\n", WIFI_SSID);
+  WiFi.mode(WIFI_STA);
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
 
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
-    Serial.print(".");
-  }
-
-  Serial.println();
-  Serial.printf("[WiFi] Conectado! IP: %s\n", WiFi.localIP().toString().c_str());
+  return false;
 }
 
 bool conectarMqtt() {
   if (mqttClient.connected()) return true;
+
+  if (WiFi.status() != WL_CONNECTED) return false;
 
   unsigned long ahora = millis();
   if (ahora - ultimoReintento < RETRY_INTERVAL_MS) return false;
@@ -106,6 +114,49 @@ bool conectarMqtt() {
   }
 
   return conectado;
+}
+
+bool encolarAlertaPendiente(const String& payload) {
+  if (payload.length() == 0) return false;
+
+  if (totalPendientes >= MAX_ALERTAS_PENDIENTES) {
+    Serial.println("[MQTT] Cola de pendientes llena. Se descarta la alerta más antigua para conservar la nueva.");
+    indicePendienteInicio = (indicePendienteInicio + 1) % MAX_ALERTAS_PENDIENTES;
+    totalPendientes--;
+  }
+
+  alertasPendientes[indicePendienteFin] = payload;
+  indicePendienteFin = (indicePendienteFin + 1) % MAX_ALERTAS_PENDIENTES;
+  totalPendientes++;
+  return true;
+}
+
+bool obtenerSiguientePendiente(String& payload) {
+  if (totalPendientes == 0) return false;
+
+  payload = alertasPendientes[indicePendienteInicio];
+  alertasPendientes[indicePendienteInicio] = "";
+  indicePendienteInicio = (indicePendienteInicio + 1) % MAX_ALERTAS_PENDIENTES;
+  totalPendientes--;
+  return true;
+}
+
+void reintentarAlertasPendientes() {
+  if (!mqttClient.connected() || totalPendientes == 0) return;
+
+  while (totalPendientes > 0) {
+    String payload;
+    if (!obtenerSiguientePendiente(payload)) break;
+
+    bool publicado = mqttClient.publish(MQTT_TOPIC, payload.c_str(), payload.length());
+    if (publicado) {
+      Serial.println("[MQTT] ✓ Alerta pendiente reenviada correctamente.");
+    } else {
+      Serial.println("[MQTT] ✗ No se pudo reenviar una alerta pendiente. Se mantiene en cola.");
+      encolarAlertaPendiente(payload);
+      break;
+    }
+  }
 }
 
 // ============================================================
@@ -160,6 +211,7 @@ void publicarAlerta(int clics) {
     digitalWrite(PIN_LED, LOW);
   } else {
     Serial.println("[MQTT] ✗ Error al publicar la alerta.");
+    encolarAlertaPendiente(String(buffer));
   }
 }
 
@@ -183,6 +235,7 @@ void setup() {
   conectarWifi();
   mqttClient.setServer(MQTT_SERVER, MQTT_PORT);
   mqttClient.setKeepAlive(60);
+  mqttClient.setSocketTimeout(2);
 
   Serial.println("[Sistema] Listo. Presiona el botón para enviar una alerta.");
 }
@@ -191,13 +244,16 @@ void setup() {
 // LOOP PRINCIPAL
 // ============================================================
 void loop() {
-  if (WiFi.status() != WL_CONNECTED) conectarWifi();
-  
+  if (WiFi.status() != WL_CONNECTED) {
+    conectarWifi();
+  }
+
   if (!mqttClient.connected()) {
     conectarMqtt();
-    return; // Si no hay MQTT, no procesamos clicks para evitar pérdidas
+  } else {
+    mqttClient.loop();
+    reintentarAlertasPendientes();
   }
-  mqttClient.loop();
 
   // ---- LÓGICA DE DEBOUNCE Y DETECCIÓN DE CLICS ----
   int lectura = digitalRead(PIN_BOTON);
