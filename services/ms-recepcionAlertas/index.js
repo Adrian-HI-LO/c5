@@ -18,7 +18,11 @@ const PORT = process.env.APP_PORT || 3001;
 const MQTT_URL = process.env.MQTT_URL || 'mqtt://localhost:1883';
 const REDIS_HOST = process.env.REDIS_HOST || 'localhost';
 const REDIS_PORT = process.env.REDIS_PORT || 6379;
-const MQTT_TOPIC = 'alertas';
+const MQTT_TOPIC = process.env.MQTT_TOPIC || 'alertas';
+const MQTT_SHARED_GROUP = process.env.MQTT_SHARED_GROUP || 'recepcion_alertas';
+const MQTT_SUBSCRIPTION = process.env.MQTT_SHARED_SUBSCRIPTION === 'false'
+  ? MQTT_TOPIC
+  : `$share/${MQTT_SHARED_GROUP}/${MQTT_TOPIC}`;
 const REDIS_QUEUE = 'alertas_queue';
 const DEDUP_KEY = 'alertas_dedup_ids'; // SET de Redis para deduplicación
 const DEDUP_TTL = 3600; // 1 hora - tiempo de vida para evitar duplicados
@@ -46,11 +50,11 @@ app.get('/', (req, res) => {
 // --- Lógica MQTT ---
 mqttClient.on('connect', () => {
   console.log(`[MQTT] Conectado al broker en ${MQTT_URL}`);
-  mqttClient.subscribe(MQTT_TOPIC, (err) => {
+  mqttClient.subscribe(MQTT_SUBSCRIPTION, (err) => {
     if (err) {
-      console.error(`[MQTT] Error al suscribirse al topic '${MQTT_TOPIC}':`, err);
+      console.error(`[MQTT] Error al suscribirse al topic '${MQTT_SUBSCRIPTION}':`, err);
     } else {
-      console.log(`[MQTT] Suscrito al topic '${MQTT_TOPIC}'`);
+      console.log(`[MQTT] Suscrito al topic '${MQTT_SUBSCRIPTION}'`);
     }
   });
 });

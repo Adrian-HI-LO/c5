@@ -54,6 +54,10 @@ function validarAlerta(alerta) {
     errores.push('Campo "prioridad" es requerido y debe ser un string.');
   }
 
+  if (!alerta.tipo_emergencia || typeof alerta.tipo_emergencia !== 'string' || !alerta.tipo_emergencia.trim()) {
+    errores.push('Campo "tipo_emergencia" es requerido y debe ser un string no vacío.');
+  }
+
   // alert_id es opcional pero recomendado para deduplicación
   // No validamos como error, solo como dato complementario
 
@@ -79,6 +83,7 @@ function normalizarAlerta(alerta) {
     ...alerta,
     ID_dispositivo: alerta.ID_dispositivo.trim(),
     prioridad: alerta.prioridad.trim().toLowerCase(),
+    tipo_emergencia: alerta.tipo_emergencia.trim().toLowerCase(),
     timestamp: timestamp,
     coordenadas: {
       lat: Number(alerta.coordenadas.lat),

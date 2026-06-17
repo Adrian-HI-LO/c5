@@ -73,8 +73,8 @@ async function procesarAlertas() {
 
   while (true) {
     try {
-      // blPop con timeout de 0.5s para máxima responsividad
-      const item = await redisClient.blPop(IN_QUEUE, 0.5);
+      // blPop con timeout entero para evitar errores de parseo y mantener baja latencia
+      const item = await redisClient.blPop(IN_QUEUE, 1);
       if (!item) continue;
 
       const alertaString = item.element;

@@ -8,6 +8,8 @@
 #include <PubSubClient.h>
 #include <ArduinoJson.h>
 #include <MD5Builder.h>
+#include <TinyGPS++.h>
+#include <HardwareSerial.h>
 
 // ============================================================
 // CONFIGURACIÓN - MODIFICAR SEGÚN TU RED Y ENTORNO
@@ -25,9 +27,14 @@ const char* MQTT_TOPIC    = "alertas";
 // Identificador único del dispositivo
 const char* DEVICE_ID     = "ESP32-001";
 
-// Coordenadas GPS estáticas del dispositivo (CDMX)
-const float LAT_DISPOSITIVO = 19.432608;
-const float LON_DISPOSITIVO = -99.133209;
+// Coordenadas de respaldo si el GPS aún no tiene fix
+const float LAT_FALLBACK = 19.432608;
+const float LON_FALLBACK = -99.133209;
+
+// GPS NEO-6M
+const int GPS_RX_PIN = 16;   // RX2 del ESP32 ← TX del NEO-6M
+const int GPS_TX_PIN = 17;   // TX2 del ESP32 → RX del NEO-6M (opcional)
+const int GPS_BAUD   = 9600;
 
 // ============================================================
 // PINES GPIO
@@ -38,19 +45,24 @@ const int PIN_LED   = 2;    // LED integrado en la placa
 // ============================================================
 // CONSTANTES DEL SISTEMA
 // ============================================================
-const unsigned long TIEMPO_ESPERA_CLICS = 800; // Ventana de tiempo para acumular clics (ms)
-const unsigned long RETRY_INTERVAL_MS   = 5000; // Reintento MQTT (ms)
+const unsigned long TIEMPO_ESPERA_CLICS = 350; // Ventana de tiempo para acumular clics (ms)
+const unsigned long RETRY_INTERVAL_MS   = 2000; // Reintento MQTT/WiFi (ms)
 const unsigned long LED_BLINK_MS        = 100;  // Parpadeo LED (ms)
+const uint8_t MAX_ALERTAS_PENDIENTES    = 5;
+const unsigned long GPS_STATUS_INTERVAL_MS = 10000;
+const unsigned long GPS_FIX_MAX_AGE_MS = 5000;
 
 // ============================================================
 // VARIABLES GLOBALES
 // ============================================================
 WiFiClient   espClient;
 PubSubClient mqttClient(espClient);
+TinyGPSPlus gps;
+HardwareSerial gpsSerial(2);
 
 // Variables para el JSON (¡Añadidas para que compile!)
-StaticJsonDocument<256> doc;
-char buffer[256];
+StaticJsonDocument<320> doc;
+char buffer[320];
 
 // Variables para el control de clics por software (eliminamos interrupción conflictiva)
 int contadorPulsaciones = 0;
@@ -61,28 +73,118 @@ unsigned long ultimoTiempoDebounce = 0;
 const unsigned long DEBOUNCE_DELAY = 50; // 50ms para evitar rebotes físicos
 
 unsigned long ultimoReintento = 0;      
+unsigned long ultimoReintentoWifi = 0;
+unsigned long ultimoStatusGPS = 0;
+bool gpsFixAnterior = false;
+float ultimaLatValida = LAT_FALLBACK;
+float ultimaLonValida = LON_FALLBACK;
+bool ultimaUbicacionReal = false;
+
+String alertasPendientes[MAX_ALERTAS_PENDIENTES];
+uint8_t indicePendienteInicio = 0;
+uint8_t indicePendienteFin = 0;
+uint8_t totalPendientes = 0;
 
 // ============================================================
 // FUNCIONES DE CONEXIÓN
 // ============================================================
 
-void conectarWifi() {
-  if (WiFi.status() == WL_CONNECTED) return;
-  
-  Serial.printf("[WiFi] Conectando a '%s'", WIFI_SSID);
-  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+void alimentarGPS() {
+  while (gpsSerial.available() > 0) {
+    gps.encode(gpsSerial.read());
+  }
+}
 
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
-    Serial.print(".");
+void reportarEstadoGPS() {
+  unsigned long ahora = millis();
+  bool gpsFixActual = gps.location.isValid() && gps.location.age() <= GPS_FIX_MAX_AGE_MS;
+
+  if (gpsFixActual && !gpsFixAnterior) {
+    Serial.println("\n[GPS] FIX OBTENIDO! Ya puedes presionar el boton con coordenadas reales.");
+    Serial.printf("[GPS] Satelites: %lu | Lat: %.6f | Lon: %.6f\n",
+                  gps.satellites.isValid() ? gps.satellites.value() : 0,
+                  gps.location.lat(),
+                  gps.location.lng());
+  } else if (!gpsFixActual && gpsFixAnterior) {
+    Serial.println("[GPS] Fix perdido. Reacquiriendo satelites...");
   }
 
-  Serial.println();
-  Serial.printf("[WiFi] Conectado! IP: %s\n", WiFi.localIP().toString().c_str());
+  if (ahora - ultimoStatusGPS >= GPS_STATUS_INTERVAL_MS) {
+    ultimoStatusGPS = ahora;
+    if (gpsFixActual) {
+      double hdop = gps.hdop.isValid() ? (gps.hdop.value() / 100.0) : -1.0;
+      Serial.printf("[GPS] Fix activo | Sat: %lu | %.6f, %.6f | HDOP: %s\n",
+                    gps.satellites.isValid() ? gps.satellites.value() : 0,
+                    gps.location.lat(),
+                    gps.location.lng(),
+                    (hdop >= 0.0) ? String(hdop, 1).c_str() : "N/A");
+    } else {
+      Serial.printf("[GPS] Buscando satelites... (chars: %lu, frases con fix: %lu)\n",
+                    gps.charsProcessed(),
+                    gps.sentencesWithFix());
+      if (gps.charsProcessed() < 10) {
+        Serial.println("[GPS] ADVERTENCIA: sin datos del modulo - verifica cable TX del NEO-6M a GPIO16");
+      }
+    }
+  }
+
+  gpsFixAnterior = gpsFixActual;
+}
+
+bool obtenerCoordenadas(float* latOut, float* lonOut, bool* esReal) {
+  alimentarGPS();
+
+  if (gps.location.isValid() && gps.location.age() <= GPS_FIX_MAX_AGE_MS) {
+    *latOut = gps.location.lat();
+    *lonOut = gps.location.lng();
+    *esReal = true;
+    ultimaLatValida = *latOut;
+    ultimaLonValida = *lonOut;
+    ultimaUbicacionReal = true;
+    return true;
+  }
+
+  if (gps.location.isValid()) {
+    *latOut = gps.location.lat();
+    *lonOut = gps.location.lng();
+    *esReal = true;
+    ultimaLatValida = *latOut;
+    ultimaLonValida = *lonOut;
+    ultimaUbicacionReal = true;
+    return true;
+  }
+
+  if (ultimaUbicacionReal) {
+    *latOut = ultimaLatValida;
+    *lonOut = ultimaLonValida;
+    *esReal = true;
+    return false;
+  }
+
+  *latOut = LAT_FALLBACK;
+  *lonOut = LON_FALLBACK;
+  *esReal = false;
+  return false;
+}
+
+bool conectarWifi() {
+  if (WiFi.status() == WL_CONNECTED) return true;
+
+  unsigned long ahora = millis();
+  if (ahora - ultimoReintentoWifi < RETRY_INTERVAL_MS) return false;
+  ultimoReintentoWifi = ahora;
+
+  Serial.printf("[WiFi] Reintentando conexión a '%s'...\n", WIFI_SSID);
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+
+  return false;
 }
 
 bool conectarMqtt() {
   if (mqttClient.connected()) return true;
+
+  if (WiFi.status() != WL_CONNECTED) return false;
 
   unsigned long ahora = millis();
   if (ahora - ultimoReintento < RETRY_INTERVAL_MS) return false;
@@ -108,6 +210,49 @@ bool conectarMqtt() {
   return conectado;
 }
 
+bool encolarAlertaPendiente(const String& payload) {
+  if (payload.length() == 0) return false;
+
+  if (totalPendientes >= MAX_ALERTAS_PENDIENTES) {
+    Serial.println("[MQTT] Cola de pendientes llena. Se descarta la alerta más antigua para conservar la nueva.");
+    indicePendienteInicio = (indicePendienteInicio + 1) % MAX_ALERTAS_PENDIENTES;
+    totalPendientes--;
+  }
+
+  alertasPendientes[indicePendienteFin] = payload;
+  indicePendienteFin = (indicePendienteFin + 1) % MAX_ALERTAS_PENDIENTES;
+  totalPendientes++;
+  return true;
+}
+
+bool obtenerSiguientePendiente(String& payload) {
+  if (totalPendientes == 0) return false;
+
+  payload = alertasPendientes[indicePendienteInicio];
+  alertasPendientes[indicePendienteInicio] = "";
+  indicePendienteInicio = (indicePendienteInicio + 1) % MAX_ALERTAS_PENDIENTES;
+  totalPendientes--;
+  return true;
+}
+
+void reintentarAlertasPendientes() {
+  if (!mqttClient.connected() || totalPendientes == 0) return;
+
+  while (totalPendientes > 0) {
+    String payload;
+    if (!obtenerSiguientePendiente(payload)) break;
+
+    bool publicado = mqttClient.publish(MQTT_TOPIC, payload.c_str(), payload.length());
+    if (publicado) {
+      Serial.println("[MQTT] ✓ Alerta pendiente reenviada correctamente.");
+    } else {
+      Serial.println("[MQTT] ✗ No se pudo reenviar una alerta pendiente. Se mantiene en cola.");
+      encolarAlertaPendiente(payload);
+      break;
+    }
+  }
+}
+
 // ============================================================
 // FUNCIÓN PRINCIPAL: PUBLICAR ALERTA
 // ============================================================
@@ -127,6 +272,12 @@ String generarHashAlerta(int clics, unsigned long timestamp) {
   return fullHash.substring(0, 12);
 }
 
+const char* tipoEmergenciaPorClics(int clics) {
+  if (clics <= 1) return "panico";
+  if (clics == 2) return "asalto";
+  return "incendio";
+}
+
 void publicarAlerta(int clics) {
   doc.clear();
   
@@ -136,16 +287,22 @@ void publicarAlerta(int clics) {
   else if(clics == 2) prioridadAsignada = "alta";
   else prioridadAsignada = "baja";
 
+  float lat, lon;
+  bool gpsReal;
+  obtenerCoordenadas(&lat, &lon, &gpsReal);
+
   unsigned long timestamp_ms = millis();
   String alert_id = generarHashAlerta(clics, timestamp_ms);
 
   doc["alert_id"] = alert_id;  // ID único para deduplicación
   doc["ID_dispositivo"] = DEVICE_ID;
   doc["prioridad"] = prioridadAsignada; 
+  doc["tipo_emergencia"] = tipoEmergenciaPorClics(clics);
   
   JsonObject coords = doc.createNestedObject("coordenadas");
-  coords["lat"] = LAT_DISPOSITIVO; 
-  coords["lon"] = LON_DISPOSITIVO; 
+  coords["lat"] = lat; 
+  coords["lon"] = lon; 
+  coords["gps_real"] = gpsReal;
   
   doc["timestamp_ms"] = timestamp_ms; 
 
@@ -160,6 +317,7 @@ void publicarAlerta(int clics) {
     digitalWrite(PIN_LED, LOW);
   } else {
     Serial.println("[MQTT] ✗ Error al publicar la alerta.");
+    encolarAlertaPendiente(String(buffer));
   }
 }
 
@@ -180,9 +338,15 @@ void setup() {
   // Configuración crucial para tu conexión: resistencia Pull-Up interna activada
   pinMode(PIN_BOTON, INPUT_PULLUP); 
 
+  // GPS NEO-6M por UART2
+  gpsSerial.begin(GPS_BAUD, SERIAL_8N1, GPS_RX_PIN, GPS_TX_PIN);
+  Serial.printf("[GPS] NEO-6M inicializado en RX=%d TX=%d a %d bps\n", GPS_RX_PIN, GPS_TX_PIN, GPS_BAUD);
+  Serial.println("[GPS] Esperando señal satelital... si estas dentro de casa puede tardar o no fijar.");
+
   conectarWifi();
   mqttClient.setServer(MQTT_SERVER, MQTT_PORT);
   mqttClient.setKeepAlive(60);
+  mqttClient.setSocketTimeout(2);
 
   Serial.println("[Sistema] Listo. Presiona el botón para enviar una alerta.");
 }
@@ -191,13 +355,19 @@ void setup() {
 // LOOP PRINCIPAL
 // ============================================================
 void loop() {
-  if (WiFi.status() != WL_CONNECTED) conectarWifi();
-  
+  alimentarGPS();
+  reportarEstadoGPS();
+
+  if (WiFi.status() != WL_CONNECTED) {
+    conectarWifi();
+  }
+
   if (!mqttClient.connected()) {
     conectarMqtt();
-    return; // Si no hay MQTT, no procesamos clicks para evitar pérdidas
+  } else {
+    mqttClient.loop();
+    reintentarAlertasPendientes();
   }
-  mqttClient.loop();
 
   // ---- LÓGICA DE DEBOUNCE Y DETECCIÓN DE CLICS ----
   int lectura = digitalRead(PIN_BOTON);

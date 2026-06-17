@@ -1,0 +1,175 @@
+openapi: 3.0.3
+info:
+  title: Sistema C5 REST API
+  version: 1.0.0
+  description: |
+    Documentación OpenAPI de los endpoints REST del sistema C5.
+    La comunicación crítica ms-notificaciones -> ms-historial usa gRPC y se documenta en `services/ms-historial/proto/historial.proto`.
+servers:
+  - url: http://localhost:8080
+    description: Nginx (recepción alertas)
+  - url: http://localhost:3002
+    description: ms-geolocalizacion
+  - url: http://localhost:3003
+    description: ms-prioridad
+  - url: http://localhost:3004
+    description: ms-notificaciones
+  - url: http://localhost:3005
+    description: ms-historial
+paths:
+  /api/health:
+    get:
+      summary: Health check (servicio según host/puerto)
+      responses:
+        '200':
+          description: Servicio activo
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+  /api/stats:
+    get:
+      summary: Estadísticas de colas/estado (servicio según host/puerto)
+      responses:
+        '200':
+          description: Estadísticas del servicio
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+  /api/reglas:
+    get:
+      summary: Reglas de clasificación y unidades (ms-prioridad)
+      responses:
+        '200':
+          description: Reglas de prioridad y despacho
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  niveles_disponibles:
+                    type: array
+                    items:
+                      type: string
+                  reglas:
+                    type: object
+                    additionalProperties:
+                      type: array
+                      items:
+                        type: string
+                  reglas_unidades_respuesta:
+                    type: object
+                    additionalProperties:
+                      type: object
+                      additionalProperties:
+                        type: array
+                        items:
+                          type: string
+  /api/operadores:
+    get:
+      summary: Operadores WebSocket conectados (ms-notificaciones)
+      responses:
+        '200':
+          description: Conteo de operadores
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  operadores_conectados:
+                    type: integer
+  /api/historial:
+    get:
+      summary: Consulta historial desde réplica
+      parameters:
+        - in: query
+          name: fecha_inicio
+          schema:
+            type: string
+            format: date-time
+        - in: query
+          name: fecha_fin
+          schema:
+            type: string
+            format: date-time
+        - in: query
+          name: zona
+          schema:
+            type: string
+        - in: query
+          name: prioridad
+          schema:
+            type: string
+            enum: [crítica, alta, media]
+      responses:
+        '200':
+          description: Historial filtrado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total:
+                    type: integer
+                  consistencia:
+                    type: string
+                  fuente:
+                    type: string
+                  alertas:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Alerta'
+  /api/historial/{id}:
+    get:
+      summary: Consulta alerta por ID
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Alerta encontrada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Alerta'
+        '404':
+          description: No encontrada
+components:
+  schemas:
+    Alerta:
+      type: object
+      properties:
+        id:
+          type: integer
+        id_dispositivo:
+          type: string
+        lat:
+          type: number
+        lon:
+          type: number
+        timestamp:
+          type: string
+          format: date-time
+        tipo_emergencia:
+          type: string
+        direccion:
+          type: string
+          nullable: true
+        pais:
+          type: string
+          nullable: true
+        ciudad:
+          type: string
+          nullable: true
+        estado_geo:
+          type: string
+          nullable: true
+        prioridad:
+          type: string
+          enum: [crítica, alta, media]
