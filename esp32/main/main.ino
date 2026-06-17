@@ -272,6 +272,12 @@ String generarHashAlerta(int clics, unsigned long timestamp) {
   return fullHash.substring(0, 12);
 }
 
+const char* tipoEmergenciaPorClics(int clics) {
+  if (clics <= 1) return "panico";
+  if (clics == 2) return "asalto";
+  return "incendio";
+}
+
 void publicarAlerta(int clics) {
   doc.clear();
   
@@ -291,6 +297,7 @@ void publicarAlerta(int clics) {
   doc["alert_id"] = alert_id;  // ID único para deduplicación
   doc["ID_dispositivo"] = DEVICE_ID;
   doc["prioridad"] = prioridadAsignada; 
+  doc["tipo_emergencia"] = tipoEmergenciaPorClics(clics);
   
   JsonObject coords = doc.createNestedObject("coordenadas");
   coords["lat"] = lat; 

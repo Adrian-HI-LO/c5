@@ -6,7 +6,7 @@
 
 const express = require('express');
 const router = express.Router();
-const { REGLAS_PRIORIDAD, NIVELES } = require('../models/prioridadModel');
+const { REGLAS_PRIORIDAD, REGLAS_UNIDADES, NIVELES } = require('../models/prioridadModel');
 
 /**
  * GET /health
@@ -32,6 +32,7 @@ router.get('/reglas', (req, res) => {
     servicio: 'ms-prioridad',
     niveles_disponibles: NIVELES,
     reglas: REGLAS_PRIORIDAD,
+    reglas_unidades_respuesta: REGLAS_UNIDADES,
     descripcion: 'Reglas de negocio para clasificación automática de alertas por prioridad.',
   });
 });

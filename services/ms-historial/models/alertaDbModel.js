@@ -77,6 +77,7 @@ async function insertarAlerta(alerta) {
     ID_dispositivo,
     coordenadas,
     timestamp,
+    tipo_emergencia,
     geolocalizacion,
     prioridad,
   } = alerta;
@@ -93,7 +94,7 @@ async function insertarAlerta(alerta) {
     coordenadas.lat,
     coordenadas.lon,
     timestamp,
-    'obsoleto',
+    tipo_emergencia || 'otro',
     geolocalizacion?.direccion  ?? null,
     geolocalizacion?.pais       ?? null,
     geolocalizacion?.ciudad     ?? null,

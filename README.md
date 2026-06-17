@@ -6,19 +6,57 @@ Sistema distribuido de alerta ciudadana que simula la infraestructura de un cent
 
 ## Arquitectura
 
-```
-ESP32 (botón pánico) ──MQTT──► Nginx (balanceo) ──► ms-recepcion (x3)
-                                                           │ Redis
-                                                     ms-geolocalizacion
-                                                           │ Redis
-                                                       ms-prioridad
-                                                           │ Redis
-                                                    ms-notificaciones ──WS──► Operadores
-                                                           │ gRPC
-                                                      ms-historial ──► PostgreSQL (M/R)
+```mermaid
+flowchart LR
+  ESP[ESP32 + Botón + GPS] -->|MQTT topic alertas| MQ[Broker MQTT Mosquitto]
+  MQ -->|$share/recepcion_alertas/alertas| R1[ms-recepcion-alertas-1]
+  MQ -->|$share/recepcion_alertas/alertas| R2[ms-recepcion-alertas-2]
+  MQ -->|$share/recepcion_alertas/alertas| R3[ms-recepcion-alertas-3]
+
+  R1 -->|Redis alertas_queue| GEO[ms-geolocalizacion]
+  R2 -->|Redis alertas_queue| GEO
+  R3 -->|Redis alertas_queue| GEO
+
+  GEO -->|Redis geolocalizadas_queue| PRI[ms-prioridad]
+  PRI -->|Redis priorizadas_queue| NOTI[ms-notificaciones]
+  NOTI -->|WebSocket tiempo real| OPS[Operadores]
+  NOTI -->|gRPC RegistrarAlerta| HIST[ms-historial]
+  NOTI -->|Fallback Redis historial_queue| HIST
+
+  HIST -->|INSERT| PGM[(PostgreSQL Master)]
+  HIST -->|SELECT| PGR[(PostgreSQL Replica)]
+
+  NGINX[Nginx least_conn HTTP] --> R1
+  NGINX --> R2
+  NGINX --> R3
 ```
 
+**Nota importante para la defensa**
+- El balanceo de **alertas MQTT** se realiza en el broker por `shared subscriptions`.
+- El `least_conn` de Nginx aplica al tráfico **HTTP** hacia `ms-recepcion-alertas-*`.
+
 > **Diagrama detallado**: [docs/arquitectura.md](./docs/arquitectura.md)
+
+---
+
+## 🧭 Guía de Rúbrica (dónde está cada cosa)
+
+Esta sección te sirve para explicar y demostrar cada criterio con evidencia concreta del repo.
+
+| Criterio de rúbrica | Estado | Evidencia (archivo/ruta) | Qué mostrar en demo |
+|---|---|---|---|
+| Diagrama de arquitectura | ✅ | `docs/arquitectura.md`, diagrama Mermaid en este README | Flujo completo ESP32 → operador → historial |
+| ADRs (≥3) con justificación | ✅ | `docs/adr/ADR-001-comunicacion-grpc.md`, `ADR-002-consistencia-postgresql.md`, `ADR-003-redis-colas.md` | Contexto, alternativas y decisión en cada ADR |
+| 5 microservicios funcionales | ✅ | `services/ms-recepcionAlertas`, `ms-geolocalizacion`, `ms-prioridad`, `ms-notificaciones`, `ms-historial` | Logs de paso por cada microservicio |
+| gRPC + contrato .proto | ✅ | `services/ms-historial/proto/historial.proto`, `services/ms-notificaciones/grpc/client.js`, `services/ms-historial/grpc/server.js` | Registro por gRPC y fallback si falla |
+| Tolerancia a fallos (notificaciones) | ✅ | `services/ms-notificaciones/models/notificacionModel.js`, colas Redis `failed_notifications_queue` y `historial_queue` | Parar `ms-notificaciones`, enviar alertas, reiniciar y ver entrega |
+| Balanceo 3 instancias recepción | ✅* | `docker-compose.yml` (3 instancias), `services/ms-recepcionAlertas/index.js` (`$share/...`), `nginx/nginx.conf` (`least_conn` HTTP) | Logs en 3 instancias + explicación shared subscription |
+| Replicación y consistencia | ✅ | `docker-compose.yml` (`postgres-master`/`postgres-replica`), `services/ms-historial/models/alertaDbModel.js` (write master/read replica), ADR-002 | Query de replicación + consulta historial desde réplica |
+| REST documentado con OpenAPI | ✅ | `docs/openapi.yaml` | Abrir archivo y mapear endpoints usados |
+| Sistema levanta con un comando | ✅ | `docker-compose.yml`, `.env.example` | `docker-compose up --build` |
+| README claro y reproducible | ✅ | `README.md` | Seguir sección Inicio Rápido |
+
+\* Para evitar discusión: explica explícitamente que el reparto de alertas MQTT no lo hace Nginx sino el broker MQTT con shared subscription.
 
 ### Stack Tecnológico
 
@@ -44,6 +82,8 @@ ESP32 (botón pánico) ──MQTT──► Nginx (balanceo) ──► ms-recepci
 | 3 | ms-prioridad | 3003 | Clasificación: crítica / alta / media |
 | 4 | ms-notificaciones | 3004 | WebSocket a operadores + cliente gRPC |
 | 5 | ms-historial | 3005 (HTTP) / 50051 (gRPC) | Persistencia PostgreSQL + API consulta |
+
+> `ms-prioridad` también realiza **asignación automática de unidades de respuesta** (patrulla/ambulancia/bomberos) por prioridad + tipo de emergencia.
 
 ---
 
@@ -121,6 +161,20 @@ Recibirás la confirmación:
   "timestamp": "2024-06-09T..."
 }
 ```
+
+Opcional: abre `frontend/index.html` para usar el panel web de operador (muestra prioridad, tipo de emergencia, geolocalización y unidades asignadas).
+
+### Interfaz web (panel de operador)
+
+- Archivo: `frontend/index.html`
+- Conexión en tiempo real: `ws://localhost:3004`
+- Muestra por alerta:
+  - `ID_dispositivo`
+  - `tipo_emergencia`
+  - `prioridad` + `prioridad_fuente`
+  - coordenadas + indicador GPS real/respaldo
+  - geolocalización enriquecida
+  - unidades de respuesta asignadas
 
 ### Paso 2: Enviar una Alerta desde ESP32 (o simulada)
 
@@ -232,6 +286,12 @@ GET http://localhost:3004/api/operadores      # Solo operadores WS activos
 GET http://localhost:3003/api/reglas          # Reglas de clasificación
 ```
 
+### Documentación OpenAPI (REST)
+
+- Archivo: `docs/openapi.yaml`
+- Cubre endpoints REST de health/stats/reglas/notificaciones/historial.
+- El canal gRPC se documenta en `services/ms-historial/proto/historial.proto`.
+
 ---
 
 ## Comunicación gRPC
@@ -284,7 +344,12 @@ docker exec redis redis-cli llen historial_queue
 
 ## Balanceo de Carga
 
-Nginx distribuye las conexiones MQTT entre **3 instancias** de ms-recepcionAlertas:
+El sistema usa dos mecanismos complementarios:
+
+- **MQTT (alertas entrantes):** el broker reparte mensajes entre 3 instancias con `shared subscription`.
+- **HTTP:** Nginx balancea con `least_conn` hacia `ms-recepcion-alertas-1/2/3`.
+
+Para validar distribución de alertas MQTT entre las 3 instancias:
 
 ```bash
 # Escalar a más instancias (ejemplo: 5)

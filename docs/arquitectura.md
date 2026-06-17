@@ -52,6 +52,7 @@ El Sistema C5 es una infraestructura distribuida de alerta ciudadana compuesta p
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │   ms-prioridad :3003                                                        │
 │   Clasificación: crítica | alta | media                                     │
+│   Asignación automática de unidades de respuesta                             │
 │   routes/prioridadRoutes.js │ models/prioridadModel.js                     │
 └────────┬────────────────────────────────────────────────────────────────────┘
          │
@@ -175,6 +176,8 @@ ms-recepcionAlertas/
 ```
 
 > **Requisito cumplido**: Al menos un servicio usa **gRPC** con contrato `.proto` documentado (ms-notificaciones → ms-historial).
+
+> **REST documentado**: OpenAPI disponible en `docs/openapi.yaml`.
 
 ---
 

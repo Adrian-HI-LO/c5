@@ -3,419 +3,963 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>C5 - Panel de Operador</title>
+    <title>Panel C5 | Alertas en tiempo real</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
+        :root {
+            --bg: #0b0f14;
+            --panel: #111820;
+            --panel-2: #151d27;
+            --border: rgba(255,255,255,0.08);
+            --text: #eef3f8;
+            --muted: #91a4b7;
+            --accent: #4cc9f0;
+            --success: #56f39a;
+            --warning: #ffbf69;
+            --danger: #ff6b6b;
+            --radius: 16px;
+            --shadow: 0 16px 40px rgba(0,0,0,0.28);
         }
 
-        :root {
-            --color-bg: #0f0f0f;
-            --color-surface: #1a1a1a;
-            --color-surface-hover: #252525;
-            --color-text: #e0e0e0;
-            --color-text-secondary: #a0a0a0;
-            --color-critical: #ff4757;
-            --color-critical-light: #ff6b7a;
-            --color-high: #ffa502;
-            --color-high-light: #ffb84d;
-            --color-medium: #ffd93d;
-            --color-low: #6bcf7f;
-            --color-accent: #00d2ff;
-            --color-success: #43e5a5;
-            --spacing-xs: 4px;
-            --spacing-sm: 8px;
-            --spacing-md: 16px;
-            --spacing-lg: 24px;
-            --border-radius: 12px;
-            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        }
+        * { box-sizing: border-box; }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            background-color: var(--color-bg);
-            color: var(--color-text);
-            line-height: 1.6;
+            margin: 0;
+            min-height: 100vh;
+            font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            background:
+                radial-gradient(circle at top, rgba(76,201,240,0.12), transparent 30%),
+                linear-gradient(180deg, #081019 0%, var(--bg) 100%);
+            color: var(--text);
         }
 
         .container {
-            max-width: 1000px;
+            width: min(1400px, calc(100% - 32px));
             margin: 0 auto;
-            padding: var(--spacing-lg);
+            padding: 28px 0 40px;
         }
 
-        header {
-            text-align: center;
-            margin-bottom: var(--spacing-lg);
-            border-bottom: 2px solid var(--color-surface);
-            padding-bottom: var(--spacing-lg);
-        }
-
-        h1 {
-            font-size: 2em;
-            font-weight: 700;
-            margin-bottom: var(--spacing-sm);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: var(--spacing-md);
-        }
-
-        .status-badge {
-            display: flex;
-            align-items: center;
-            gap: var(--spacing-sm);
-            padding: var(--spacing-sm) var(--spacing-md);
-            background-color: var(--color-surface);
-            border-radius: 50px;
-            width: fit-content;
-            margin: var(--spacing-md) auto;
-            font-size: 0.9em;
-            border: 2px solid var(--color-text-secondary);
-            transition: var(--transition);
-        }
-
-        .status-badge.connected {
-            border-color: var(--color-success);
-            background-color: rgba(67, 229, 165, 0.1);
-            color: var(--color-success);
-        }
-
-        .status-badge.disconnected {
-            border-color: var(--color-critical);
-            background-color: rgba(255, 71, 87, 0.1);
-            color: var(--color-critical);
-        }
-
-        .status-dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            animation: pulse 2s infinite;
-        }
-
-        .status-badge.connected .status-dot {
-            background-color: var(--color-success);
-        }
-
-        .status-badge.disconnected .status-dot {
-            background-color: var(--color-critical);
-        }
-
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
-        }
-
-        .controls {
-            display: flex;
-            gap: var(--spacing-md);
-            justify-content: center;
-            margin-bottom: var(--spacing-lg);
-            flex-wrap: wrap;
-        }
-
-        button {
-            padding: var(--spacing-sm) var(--spacing-md);
-            background-color: var(--color-surface);
-            color: var(--color-text);
-            border: 1px solid var(--color-accent);
-            border-radius: var(--border-radius);
-            cursor: pointer;
-            font-size: 0.9em;
-            font-weight: 500;
-            transition: var(--transition);
-        }
-
-        button:hover {
-            background-color: var(--color-accent);
-            color: var(--color-bg);
-            box-shadow: 0 0 20px rgba(0, 210, 255, 0.3);
-        }
-
-        button:active {
-            transform: scale(0.95);
-        }
-
-        .alerts-header {
+        .header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: var(--spacing-md);
-            padding: var(--spacing-md) 0;
-            border-bottom: 1px solid var(--color-surface);
+            gap: 16px;
+            margin-bottom: 24px;
         }
 
-        .alerts-header h2 {
-            font-size: 1.3em;
-            font-weight: 600;
+        .brand h1 {
+            margin: 0;
+            font-size: clamp(1.8rem, 3vw, 2.6rem);
+            letter-spacing: -0.03em;
+        }
+
+        .brand p {
+            margin: 8px 0 0;
+            color: var(--muted);
+            max-width: 72ch;
+        }
+
+        .status-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 16px;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid var(--border);
+            border-radius: 999px;
+            backdrop-filter: blur(10px);
+            white-space: nowrap;
+        }
+
+        .status-indicator .dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--danger);
+            box-shadow: 0 0 0 6px rgba(255,107,107,0.12);
+        }
+
+        .status-indicator.connected .dot {
+            background: var(--success);
+            box-shadow: 0 0 0 6px rgba(86,243,154,0.12);
+        }
+
+        .dashboard {
+            display: grid;
+            gap: 24px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 16px;
+        }
+
+        .stat-card,
+        .panel,
+        .alerta,
+        .modal {
+            background: linear-gradient(180deg, rgba(17,24,32,0.96), rgba(12,18,26,0.96));
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow);
+        }
+
+        .stat-card {
+            border-radius: var(--radius);
+            padding: 16px;
+            display: grid;
+            gap: 8px;
+        }
+
+        .stat-label {
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: .08em;
+            font-size: .78rem;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 800;
+            line-height: 1;
+        }
+
+        .stat-subtitle {
+            color: var(--muted);
+            font-size: .88rem;
+        }
+
+        .stat-success .stat-value { color: var(--success); }
+        .stat-critical .stat-value { color: var(--danger); }
+        .stat-high .stat-value { color: var(--warning); }
+        .stat-medium .stat-value { color: var(--accent); }
+
+        .panel {
+            border-radius: var(--radius);
+            padding: 24px;
+        }
+
+        .filters-header,
+        .toolbar,
+        .alerts-header,
+        .modal-header,
+        .modal-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .filters-header h2,
+        .alerts-header h2,
+        .modal-title h3 {
+            margin: 0;
+            letter-spacing: -0.02em;
+        }
+
+        .muted { color: var(--muted); }
+
+        .filters-grid {
+            display: grid;
+            grid-template-columns: 1.35fr repeat(4, minmax(0, 1fr));
+            gap: 16px;
+            margin-top: 16px;
+        }
+
+        .field {
+            display: grid;
+            gap: 6px;
+        }
+
+        .field label {
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: .08em;
+            font-size: .75rem;
+        }
+
+        .field input,
+        .field select,
+        .modal textarea {
+            width: 100%;
+            border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.08);
+            background: rgba(255,255,255,0.03);
+            color: var(--text);
+            padding: 12px 14px;
+            outline: none;
+            transition: 160ms ease;
+        }
+
+        .field input:focus,
+        .field select:focus,
+        .modal textarea:focus {
+            border-color: rgba(76,201,240,0.8);
+            box-shadow: 0 0 0 3px rgba(76,201,240,0.12);
+        }
+
+        .toolbar {
+            padding: 2px 0 0;
+        }
+
+        .actions,
+        .alert-badges,
+        .alert-actions,
+        .compact-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        button,
+        .chip,
+        .status-pill,
+        .card-btn {
+            border: 0;
+            border-radius: 999px;
+            font: inherit;
+        }
+
+        button {
+            cursor: pointer;
+            padding: 12px 16px;
+            background: linear-gradient(180deg, rgba(76,201,240,0.22), rgba(76,201,240,0.14));
+            color: var(--text);
+            border: 1px solid rgba(76,201,240,0.28);
+            transition: transform 160ms ease, border-color 160ms ease, background 160ms ease;
+        }
+
+        button:hover { transform: translateY(-1px); }
+
+        .btn-secondary {
+            background: rgba(255,255,255,0.04);
+            border-color: rgba(255,255,255,0.08);
+        }
+
+        .btn-danger {
+            background: rgba(255,107,107,0.12);
+            border-color: rgba(255,107,107,0.22);
+        }
+
+        .alerts-header {
+            margin: 24px 0 16px;
         }
 
         .alerts-count {
-            background-color: var(--color-surface);
-            padding: var(--spacing-sm) var(--spacing-md);
-            border-radius: 50px;
-            font-size: 0.85em;
-            color: var(--color-accent);
-            font-weight: 600;
+            color: var(--muted);
+            font-size: .95rem;
         }
 
         #alertas {
             display: grid;
-            gap: var(--spacing-md);
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 16px;
         }
 
         .alerta {
-            padding: var(--spacing-md);
-            border-radius: var(--border-radius);
-            border-left: 4px solid;
-            background-color: var(--color-surface);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-            transition: var(--transition);
             position: relative;
+            border-radius: 18px;
+            padding: 16px;
             overflow: hidden;
+            transition: all 0.3s ease;
         }
 
         .alerta::before {
             content: '';
             position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: linear-gradient(135deg, rgba(255,255,255,0.05) 0%, transparent 100%);
-            pointer-events: none;
+            inset: 0 auto 0 0;
+            width: 4px;
+            background: var(--accent);
         }
 
-        .alerta:hover {
-            background-color: var(--color-surface-hover);
-            box-shadow: 0 8px 20px rgba(0, 210, 255, 0.15);
-            transform: translateY(-2px);
+        .alerta.crítica::before, .alerta.critica::before { background: var(--danger); }
+        .alerta.alta::before { background: var(--warning); }
+        .alerta.media::before { background: var(--accent); }
+        .alerta.baja::before { background: var(--success); }
+
+        /* --- NUEVOS ESTILOS DE ESTADO --- */
+        .alerta.status-despachada {
+            border: 1px solid rgba(255,191,105, 0.4);
+            box-shadow: 0 0 15px rgba(255,191,105, 0.05);
+        }
+        .alerta.status-despachada::before {
+            background: var(--warning);
         }
 
-        .alerta.critica { border-color: var(--color-critical); }
-        .alerta.alta { border-color: var(--color-high); }
-        .alerta.media { border-color: var(--color-medium); }
-        .alerta.baja { border-color: var(--color-low); }
+        .alerta.status-atendida {
+            opacity: 0.55;
+            filter: grayscale(40%);
+            border: 1px solid rgba(86,243,154, 0.2);
+        }
+        .alerta.status-atendida::before {
+            background: var(--success);
+        }
+        .alerta.status-atendida:hover {
+            opacity: 1;
+        }
 
         .alerta-header {
             display: flex;
             justify-content: space-between;
+            gap: 12px;
             align-items: start;
-            gap: var(--spacing-md);
-            margin-bottom: var(--spacing-sm);
-            position: relative;
-            z-index: 1;
+            margin-bottom: 12px;
         }
 
         .alerta-title {
             display: flex;
             align-items: center;
-            gap: var(--spacing-sm);
-            font-size: 1.1em;
-            font-weight: 600;
+            gap: 10px;
+            margin-bottom: 8px;
+            font-size: 1.05rem;
         }
 
-        .priority-badge {
-            padding: var(--spacing-xs) var(--spacing-sm);
-            border-radius: 4px;
-            font-size: 0.75em;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            white-space: nowrap;
+        .priority-badge,
+        .chip,
+        .status-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 7px 12px;
+            font-size: .78rem;
+            letter-spacing: .02em;
         }
 
-        .priority-badge.critica {
-            background-color: rgba(255, 71, 87, 0.2);
-            color: var(--color-critical-light);
-            border: 1px solid var(--color-critical);
+        .priority-badge.crítica, .priority-badge.critica,
+        .status-pill.atendida,
+        .chip.success {
+            background: rgba(86,243,154,0.12);
+            color: var(--success);
         }
 
-        .priority-badge.alta {
-            background-color: rgba(255, 165, 2, 0.2);
-            color: var(--color-high-light);
-            border: 1px solid var(--color-high);
+        .priority-badge.alta,
+        .status-pill.despachada,
+        .chip.warning {
+            background: rgba(255,191,105,0.12);
+            color: var(--warning);
         }
 
-        .priority-badge.media {
-            background-color: rgba(255, 217, 61, 0.2);
-            color: var(--color-medium);
-            border: 1px solid var(--color-medium);
-        }
-
-        .priority-badge.baja {
-            background-color: rgba(107, 207, 127, 0.2);
-            color: var(--color-low);
-            border: 1px solid var(--color-low);
+        .priority-badge.media,
+        .chip {
+            background: rgba(76,201,240,0.12);
+            color: var(--accent);
         }
 
         .alerta-time {
-            font-size: 0.8em;
-            color: var(--color-text-secondary);
-            white-space: nowrap;
+            color: var(--muted);
+            font-size: .82rem;
+            text-align: right;
         }
 
         .alerta-content {
             display: grid;
-            gap: var(--spacing-sm);
-            position: relative;
-            z-index: 1;
+            gap: 10px;
         }
 
         .alerta-field {
             display: flex;
-            gap: var(--spacing-md);
-            font-size: 0.95em;
+            gap: 10px;
+            font-size: .94rem;
         }
 
         .alerta-field-label {
-            color: var(--color-text-secondary);
-            font-weight: 500;
-            min-width: 120px;
+            min-width: 110px;
+            color: var(--muted);
+            font-weight: 600;
         }
 
         .alerta-field-value {
-            color: var(--color-text);
-            font-family: 'Courier New', monospace;
+            color: var(--text);
             flex: 1;
+            word-break: break-word;
         }
 
         .alerta-coords {
-            background-color: rgba(0, 210, 255, 0.05);
-            padding: var(--spacing-sm);
-            border-radius: 8px;
-            border-left: 2px solid var(--color-accent);
-            margin-top: var(--spacing-sm);
+            padding: 12px;
+            border-radius: 14px;
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.06);
         }
 
+        .alert-actions {
+            margin-top: 6px;
+            display: flex;
+            align-items: center;
+        }
+
+        .card-btn {
+            padding: 10px 14px;
+            font-size: .84rem;
+            background: rgba(255,255,255,0.04);
+            color: var(--text);
+            border: 1px solid rgba(255,255,255,0.08);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .card-btn:hover { transform: translateY(-1px); }
+        .card-btn.primary { border-color: rgba(76,201,240,0.25); background: rgba(76,201,240,0.10); }
+        .card-btn.warning { border-color: rgba(255,191,105,0.25); background: rgba(255,191,105,0.10); }
+        .card-btn.success { border-color: rgba(86,243,154,0.25); background: rgba(86,243,154,0.10); }
+
+        .delete-btn {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            padding: 0;
+            background: rgba(255,255,255,0.03);
+            color: var(--muted);
+            opacity: 0;
+            border: 1px solid rgba(255,255,255,0.08);
+        }
+
+        .alerta:hover .delete-btn { opacity: 1; }
+
         .empty-state {
+            grid-column: 1 / -1;
             text-align: center;
-            padding: var(--spacing-lg);
-            color: var(--color-text-secondary);
+            padding: 50px 20px;
+            border: 1px dashed rgba(255,255,255,0.12);
+            border-radius: var(--radius);
+            color: var(--muted);
+            background: rgba(255,255,255,0.02);
         }
 
         .empty-state svg {
             width: 64px;
             height: 64px;
-            opacity: 0.3;
-            margin-bottom: var(--spacing-md);
+            opacity: .28;
+            margin-bottom: 12px;
         }
 
-        @media (max-width: 640px) {
-            .container {
-                padding: var(--spacing-md);
+        .modal-backdrop {
+            position: fixed;
+            inset: 0;
+            display: none;
+            place-items: center;
+            padding: 24px;
+            background: rgba(4,8,12,0.72);
+            backdrop-filter: blur(8px);
+            z-index: 50;
+        }
+
+        .modal-backdrop.open { display: grid; }
+
+        .modal {
+            width: min(1080px, 100%);
+            border-radius: 22px;
+            padding: 22px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            margin-bottom: 18px;
+        }
+
+        .modal-title {
+            display: grid;
+            gap: 8px;
+        }
+
+        .modal-close {
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            padding: 0;
+        }
+
+        .detail-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 14px;
+            margin-bottom: 18px;
+        }
+
+        .detail-box {
+            padding: 16px;
+            border-radius: 16px;
+            border: 1px solid rgba(255,255,255,0.06);
+            background: rgba(255,255,255,0.03);
+        }
+
+        .detail-box h4 {
+            margin: 0 0 12px;
+            font-size: .95rem;
+        }
+
+        .detail-list {
+            display: grid;
+            gap: 8px;
+            color: var(--text);
+        }
+
+        .modal .compact-grid {
+            display: grid;
+            grid-template-columns: 220px 1fr;
+            gap: 14px;
+        }
+
+        .modal-footer {
+            margin-top: 18px;
+        }
+
+        .modal textarea {
+            resize: vertical;
+            min-height: 44px;
+        }
+
+        .confirm-modal {
+            width: min(520px, 100%);
+        }
+
+        .confirm-body {
+            padding: 8px 2px 4px;
+            color: var(--muted);
+            line-height: 1.6;
+        }
+
+        @media (max-width: 1100px) {
+            .stats-grid,
+            .filters-grid,
+            .detail-grid,
+            .modal .compact-grid {
+                grid-template-columns: 1fr 1fr;
             }
 
-            h1 {
-                font-size: 1.5em;
+            .filters-grid .field:first-child {
+                grid-column: 1 / -1;
             }
+        }
 
-            .controls {
+        @media (max-width: 760px) {
+            .container { width: min(100% - 20px, 100%); }
+            .header,
+            .filters-header,
+            .toolbar,
+            .alerts-header,
+            .modal-header,
+            .modal-footer {
                 flex-direction: column;
+                align-items: stretch;
             }
 
-            button {
+            .stats-grid,
+            .filters-grid,
+            .detail-grid,
+            .modal .compact-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .filters-grid .field:first-child {
+                grid-column: auto;
+            }
+
+            .actions,
+            .alert-actions {
                 width: 100%;
             }
 
-            .alerts-header {
-                flex-direction: column;
-                align-items: flex-start;
-                gap: var(--spacing-sm);
+            button,
+            .card-btn {
+                width: 100%;
+                justify-content: center;
             }
-        }
-
-        .delete-btn {
-            position: absolute;
-            top: var(--spacing-md);
-            right: var(--spacing-md);
-            background: transparent;
-            border: none;
-            color: var(--color-text-secondary);
-            cursor: pointer;
-            font-size: 1.2em;
-            opacity: 0;
-            transition: var(--transition);
-            z-index: 2;
-        }
-
-        .alerta:hover .delete-btn {
-            opacity: 1;
-            color: var(--color-critical);
-        }
-
-        .delete-btn:hover {
-            transform: scale(1.2);
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <header>
-            <h1>
-                <span>🚨</span>
-                <span>Centro de Comando C5</span>
-            </h1>
-            <div class="status-badge disconnected" id="status">
-                <span class="status-dot"></span>
-                <span id="statusText">Conectando...</span>
+        <header class="header">
+            <div class="brand">
+                <h1>Panel C5 de alertas</h1>
+                <p>Vista minimalista para operación en tiempo real: filtra, revisa detalles, simula despacho y marca atenciones sin tocar el canal de llegada de alertas.</p>
+            </div>
+            <div id="status" class="status-indicator disconnected">
+                <span class="dot"></span>
+                <strong id="statusText">🔴 Desconectado</strong>
             </div>
         </header>
 
-        <div class="controls">
-            <button onclick="limpiarAlertas()">🗑️ Limpiar historial</button>
-            <button onclick="exportarAlertas()">📥 Descargar historial</button>
-        </div>
+        <main class="dashboard">
+            <section class="stats-grid" aria-label="Resumen del sistema">
+                <article class="stat-card stat-success">
+                    <span class="stat-label">Alertas visibles</span>
+                    <span class="stat-value" id="visibleCount">0</span>
+                    <span class="stat-subtitle">Según filtros aplicados</span>
+                </article>
+                <article class="stat-card stat-critical">
+                    <span class="stat-label">Críticas</span>
+                    <span class="stat-value" id="criticalAlerts">0</span>
+                    <span class="stat-subtitle">Priorización crítica</span>
+                </article>
+                <article class="stat-card stat-high">
+                    <span class="stat-label">Despachadas</span>
+                    <span class="stat-value" id="dispatchedAlerts">0</span>
+                    <span class="stat-subtitle">Simuladas desde el panel</span>
+                </article>
+                <article class="stat-card stat-medium">
+                    <span class="stat-label">Atendidas</span>
+                    <span class="stat-value" id="attendedAlerts">0</span>
+                    <span class="stat-subtitle">Cerradas por operador</span>
+                </article>
+            </section>
 
-        <div class="alerts-header">
-            <h2>Alertas en tiempo real</h2>
-            <div class="alerts-count">
-                <span id="alertCount">0</span> alertas
+            <section class="panel" aria-label="Filtros de alertas">
+                <div class="filters-header">
+                    <div>
+                        <h2>Filtros y acciones</h2>
+                        <p class="muted">Filtra por tipo, prioridad, estado o fecha; después abre el detalle para simular despacho o atención.</p>
+                    </div>
+                    <div class="actions">
+                        <button class="btn-secondary" id="btnResetFilters" type="button">Reset filtros</button>
+                        <button class="btn-danger" onclick="limpiarAlertas()" type="button">Limpiar historial</button>
+                        <button onclick="exportarAlertas()" type="button">Descargar historial</button>
+                    </div>
+                </div>
+
+                <div class="filters-grid">
+                    <div class="field">
+                        <label for="filterSearch">Buscar</label>
+                        <input id="filterSearch" type="search" placeholder="Dispositivo, dirección o unidad">
+                    </div>
+                    <div class="field">
+                        <label for="filterType">Tipo</label>
+                        <select id="filterType"><option value="all">Todos</option></select>
+                    </div>
+                    <div class="field">
+                        <label for="filterPriority">Prioridad</label>
+                        <select id="filterPriority">
+                            <option value="all">Todas</option>
+                            <option value="crítica">Crítica</option>
+                            <option value="alta">Alta</option>
+                            <option value="media">Media</option>
+                            <option value="baja">Baja</option>
+                        </select>
+                    </div>
+                    <div class="field">
+                        <label for="filterStatus">Estado</label>
+                        <select id="filterStatus">
+                            <option value="all">Todos</option>
+                            <option value="pendiente">Pendiente</option>
+                            <option value="despachada">Despachada</option>
+                            <option value="atendida">Atendida</option>
+                        </select>
+                    </div>
+                    <div class="field">
+                        <label for="filterDateFrom">Desde</label>
+                        <input id="filterDateFrom" type="date">
+                    </div>
+                </div>
+
+                <div class="filters-grid" style="margin-top: 14px; grid-template-columns: 1fr 1fr auto; align-items:end;">
+                    <div class="field">
+                        <label for="filterDateTo">Hasta</label>
+                        <input id="filterDateTo" type="date">
+                    </div>
+                    <div class="field">
+                        <label>&nbsp;</label>
+                        <button id="btnApplyFilters" type="button">Aplicar filtros</button>
+                    </div>
+                    <div class="field">
+                        <label>&nbsp;</label>
+                        <button class="btn-secondary" id="btnClearModalSelection" type="button">Limpiar observación</button>
+                    </div>
+                </div>
+            </section>
+
+            <div class="toolbar">
+                <div class="muted"><strong>Tip:</strong> puedes abrir el detalle de cada alerta y registrar una acción sin afectar la recepción en vivo.</div>
+                <div class="alerts-count"><span id="alertCount">0</span> visibles de <span id="totalAlerts">0</span> totales</div>
+            </div>
+
+            <section class="alerts-header">
+                <h2>Alertas en tiempo real</h2>
+                <div class="alerts-count"><span id="visibleHeaderCount">0</span> alertas</div>
+            </section>
+
+            <section id="alertas" aria-live="polite">
+                <div class="empty-state">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                    </svg>
+                    <p>En espera de alertas...</p>
+                    <small>Cuando llegue una alerta, podrás filtrarla y abrir el detalle.</small>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <div id="alertModal" class="modal-backdrop" aria-hidden="true">
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+            <div class="modal-header">
+                <div class="modal-title">
+                    <h3 id="modalTitle">Detalle de alerta</h3>
+                    <div class="alert-badges" id="modalBadges"></div>
+                </div>
+                <button class="modal-close" id="btnCloseModal" type="button" aria-label="Cerrar">✕</button>
+            </div>
+
+            <div class="detail-grid">
+                <article class="detail-box">
+                    <h4>Identidad y estado</h4>
+                    <div class="detail-list" id="modalIdentity"></div>
+                </article>
+                <article class="detail-box">
+                    <h4>Ubicación y geolocalización</h4>
+                    <div class="detail-list" id="modalGeo"></div>
+                </article>
+                <article class="detail-box">
+                    <h4>Despacho de unidades</h4>
+                    <div class="detail-list" id="modalDispatch"></div>
+                </article>
+                <article class="detail-box">
+                    <h4>Bitácora operativa</h4>
+                    <div class="detail-list" id="modalTimeline"></div>
+                </article>
+            </div>
+
+            <div class="compact-grid" style="grid-template-columns: 220px 1fr;">
+                <div class="field">
+                    <label for="modalUnitSelect">Unidad a simular</label>
+                    <select id="modalUnitSelect"></select>
+                </div>
+                <div class="field">
+                    <label for="modalNotes">Observaciones</label>
+                    <textarea id="modalNotes" placeholder="Ej. patrulla al punto, ambulancia en camino..."></textarea>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn-secondary" id="btnMarkAttended" type="button">Marcar atendida</button>
+                <button class="btn-secondary" id="btnSimulateDispatch" type="button">Simular despacho</button>
+                <button id="btnSaveAction" type="button">Guardar acción</button>
             </div>
         </div>
+    </div>
 
-        <div id="alertas">
-            <div class="empty-state">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-                </svg>
-                <p>En espera de alertas...</p>
+    <div id="confirmModal" class="modal-backdrop" aria-hidden="true">
+        <div class="modal confirm-modal" role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
+            <div class="modal-header" style="margin-bottom: 10px;">
+                <div class="modal-title">
+                    <h3 id="confirmTitle">Confirmar acción</h3>
+                </div>
+                <button class="modal-close" id="btnCloseConfirmModal" type="button" aria-label="Cerrar">✕</button>
+            </div>
+            <div class="confirm-body" id="confirmMessage">¿Deseas continuar?</div>
+            <div class="modal-footer" style="margin-top: 18px;">
+                <button class="btn-secondary" id="btnCancelConfirm" type="button">Cancelar</button>
+                <button class="btn-danger" id="btnAcceptConfirm" type="button">Confirmar</button>
             </div>
         </div>
     </div>
 
     <script>
-        // ===== CONFIG =====
         const STORAGE_KEY = 'c5_alertas_historial';
         const MAX_ALERTS_STORED = 100;
         const WS_RECONNECT_INTERVAL = 3000;
 
-        // ===== STATE =====
         let alerts = [];
         let ws = null;
         let wsReconnectTimeout = null;
-        let processedIds = new Set(); // Deduplicación en frontend
+        let processedIds = new Set();
+        let activeAlertId = null;
+        let pendingConfirmAction = null;
+        let filters = { q: '', type: 'all', priority: 'all', status: 'all', from: '', to: '' };
 
-        // ===== DOM ELEMENTS =====
         const alertasContainer = document.getElementById('alertas');
         const statusBadge = document.getElementById('status');
         const statusText = document.getElementById('statusText');
         const alertCount = document.getElementById('alertCount');
+        const visibleHeaderCount = document.getElementById('visibleHeaderCount');
+        const visibleCount = document.getElementById('visibleCount');
+        const totalAlerts = document.getElementById('totalAlerts');
+        const criticalAlerts = document.getElementById('criticalAlerts');
+        const dispatchedAlerts = document.getElementById('dispatchedAlerts');
+        const attendedAlerts = document.getElementById('attendedAlerts');
+        const filterSearch = document.getElementById('filterSearch');
+        const filterType = document.getElementById('filterType');
+        const filterPriority = document.getElementById('filterPriority');
+        const filterStatus = document.getElementById('filterStatus');
+        const filterDateFrom = document.getElementById('filterDateFrom');
+        const filterDateTo = document.getElementById('filterDateTo');
+        const btnApplyFilters = document.getElementById('btnApplyFilters');
+        const btnResetFilters = document.getElementById('btnResetFilters');
+        const btnClearModalSelection = document.getElementById('btnClearModalSelection');
+        const alertModal = document.getElementById('alertModal');
+        const btnCloseModal = document.getElementById('btnCloseModal');
+        const modalTitle = document.getElementById('modalTitle');
+        const modalBadges = document.getElementById('modalBadges');
+        const modalIdentity = document.getElementById('modalIdentity');
+        const modalGeo = document.getElementById('modalGeo');
+        const modalDispatch = document.getElementById('modalDispatch');
+        const modalTimeline = document.getElementById('modalTimeline');
+        const modalUnitSelect = document.getElementById('modalUnitSelect');
+        const modalNotes = document.getElementById('modalNotes');
+        const btnSimulateDispatch = document.getElementById('btnSimulateDispatch');
+        const btnMarkAttended = document.getElementById('btnMarkAttended');
+        const btnSaveAction = document.getElementById('btnSaveAction');
+        const confirmModal = document.getElementById('confirmModal');
+        const confirmMessage = document.getElementById('confirmMessage');
+        const btnCloseConfirmModal = document.getElementById('btnCloseConfirmModal');
+        const btnCancelConfirm = document.getElementById('btnCancelConfirm');
+        const btnAcceptConfirm = document.getElementById('btnAcceptConfirm');
 
-        // ===== STORAGE =====
+        function escapeHtml(value) {
+            return String(value ?? '')
+                .replaceAll('&', '&amp;')
+                .replaceAll('<', '&lt;')
+                .replaceAll('>', '&gt;')
+                .replaceAll('"', '&quot;')
+                .replaceAll("'", '&#39;');
+        }
+
+        function unwrapAlertPayload(data) {
+            if (!data || typeof data !== 'object') return {};
+            if (data.alerta && typeof data.alerta === 'object') return data.alerta;
+            if (data.payload && typeof data.payload === 'object') return data.payload;
+            if (data.data && typeof data.data === 'object') return data.data;
+            return data;
+        }
+
+        function pickPriority(value) {
+            const raw = String(value ?? 'media').toLowerCase();
+            if (raw === 'critica') return 'crítica';
+            if (['crítica', 'alta', 'media', 'baja'].includes(raw)) return raw;
+            return 'media';
+        }
+
+        function normalizeCoords(data) {
+            const source = data.coordenadas || data.coords || data.ubicacion || {};
+            const latRaw = source.lat ?? source.latitude ?? data.lat ?? data.latitude ?? data.latitud;
+            const lonRaw = source.lon ?? source.lng ?? source.longitude ?? data.lon ?? data.lng ?? data.longitude ?? data.longitud;
+            const gpsReal = source.gps_real ?? source.gpsReal ?? data.gps_real ?? data.gpsReal ?? null;
+            return {
+                lat: Number(latRaw),
+                lon: Number(lonRaw),
+                gps_real: gpsReal,
+            };
+        }
+
+        function generateAlertId(alerta) {
+            const payload = unwrapAlertPayload(alerta);
+            const device = payload.ID_dispositivo || payload.id_dispositivo || payload.dispositivo || payload.deviceId || 'desconocido';
+            const ts = payload.timestamp || payload.timestamp_ms || payload.recibido_en || payload.created_at || Date.now();
+            return payload.id || payload._id || payload.uuid || `${device}-${ts}`;
+        }
+
+        function normalizeStatus(alert) {
+            if (alert.estado_operativo) return alert.estado_operativo;
+            if (alert.atendida) return 'atendida';
+            if (alert.despachada) return 'despachada';
+            return 'pendiente';
+        }
+
+        function normalizeAlert(data) {
+            const payload = unwrapAlertPayload(data);
+            const coords = normalizeCoords(payload);
+            const unidad_respuesta = data.unidad_respuesta || null;
+            return {
+                id: payload.id || generateAlertId(payload),
+                prioridad: pickPriority(payload.prioridad || payload.priority),
+                dispositivo: payload.ID_dispositivo || payload.id_dispositivo || payload.dispositivo || payload.deviceId || 'Desconocido',
+                ID_dispositivo: payload.ID_dispositivo || payload.id_dispositivo || payload.dispositivo || payload.deviceId || 'Desconocido',
+                tipo_emergencia: String(payload.tipo_emergencia || payload.tipoEmergencia || payload.tipo || 'otro').toLowerCase(),
+                coordenadas: {
+                    lat: Number(coords.lat),
+                    lon: Number(coords.lon),
+                    gps_real: coords.gps_real,
+                },
+                gps_real: coords.gps_real,
+                geolocalizacion: payload.geolocalizacion || payload.geo || null,
+                unidad_respuesta: payload.unidad_respuesta || payload.unidadRespuesta || unidad_respuesta,
+                prioridad_fuente: payload.prioridad_fuente || payload.prioridadFuente || 'desconocida',
+                estado_operativo: normalizeStatus(payload),
+                atendida: Boolean(payload.atendida),
+                despachada: Boolean(payload.despachada),
+                unidad_despachada: payload.unidad_despachada || payload.unidadDespachada || null,
+                despachada_en: payload.despachada_en || payload.despachadaEn || null,
+                atendida_en: payload.atendida_en || payload.atendidaEn || null,
+                acciones: Array.isArray(payload.acciones) ? payload.acciones : [],
+                ultima_observacion: payload.ultima_observacion || payload.ultimaObservacion || '',
+                timestamp: payload.timestamp || payload.created_at || new Date().toISOString(),
+                recibido_en: payload.recibido_en || payload.timestamp || payload.created_at || new Date().toISOString(),
+            };
+        }
+
+        function getAlertStatus(alert) {
+            return normalizeStatus(alert);
+        }
+
+        function getAlertDate(alert) {
+            const candidate = alert.recibido_en || alert.timestamp || alert.timestamp_ms;
+            const parsed = new Date(candidate);
+            return Number.isNaN(parsed.getTime()) ? null : parsed;
+        }
+
+        function getPriorityEmoji(priority) {
+            const emojis = { 'crítica': '🔴', 'critica': '🔴', 'alta': '🟠', 'media': '🟡', 'baja': '🟢' };
+            return emojis[String(priority || '').toLowerCase()] || '⚪';
+        }
+
+        function getTimeAgo(date) {
+            const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
+            if (seconds < 60) return 'Hace poco';
+            const minutes = Math.floor(seconds / 60);
+            if (minutes < 60) return `Hace ${minutes}m`;
+            const hours = Math.floor(minutes / 60);
+            if (hours < 24) return `Hace ${hours}h`;
+            return `Hace ${Math.floor(hours / 24)}d`;
+        }
+
+        function getRecommendedUnitsByType(tipoEmergencia) {
+            const tipo = String(tipoEmergencia || '').toLowerCase();
+            const unitsByType = {
+                'incendio': ['UB-C5-01', 'UB-C5-02'],
+                'robo': ['UP-C5-01', 'UP-C5-02'],
+                'asalto': ['UP-C5-01', 'UP-C5-02'],
+                'accidente': ['UM-C5-01', 'UP-C5-01'],
+                'médica': ['UM-C5-01', 'UM-C5-02'],
+                'medica': ['UM-C5-01', 'UM-C5-02'],
+                'rescate': ['UR-C5-01', 'UB-C5-01'],
+                'derrumbe': ['UR-C5-01', 'UB-C5-02'],
+                'alerta': ['UP-C5-01'],
+                'falsa alarma': ['UP-C5-05'],
+            };
+            return unitsByType[tipo] || null;
+        }
+
+        function getAvailableUnits(alert) {
+            const units = alert.unidad_respuesta?.unidades || [];
+            if (units.length) return units;
+            
+            // Primero intentamos recomendar según tipo de emergencia
+            const byType = getRecommendedUnitsByType(alert.tipo_emergencia);
+            if (byType && byType.length) return byType;
+            
+            // Si no hay coincidencia de tipo, usamos la prioridad como fallback
+            const fallback = {
+                'crítica': ['UP-C5-01', 'UT-C5-01'],
+                'critica': ['UP-C5-01', 'UT-C5-01'],
+                'alta': ['UP-C5-02'],
+                'media': ['UP-C5-04'],
+                'baja': ['UP-C5-05'],
+            };
+            return fallback[String(alert.prioridad || 'media').toLowerCase()] || fallback.media;
+        }
+
         function loadFromStorage() {
             try {
                 const stored = localStorage.getItem(STORAGE_KEY);
                 if (stored) {
-                    alerts = JSON.parse(stored);
-                    processedIds = new Set(alerts.map(a => a.id || `${a.ID_dispositivo}-${a.timestamp}`));
-                    renderAlerts();
+                    alerts = JSON.parse(stored).map(normalizeAlert);
+                    processedIds = new Set(alerts.map((a) => a.id));
                 }
             } catch (err) {
                 console.error('Error loading from storage:', err);
+                alerts = [];
             }
         }
 
@@ -427,13 +971,28 @@
             }
         }
 
+        function openConfirmModal(message, onAccept) {
+            pendingConfirmAction = typeof onAccept === 'function' ? onAccept : null;
+            confirmMessage.textContent = message || '¿Deseas continuar?';
+            confirmModal.classList.add('open');
+            confirmModal.setAttribute('aria-hidden', 'false');
+        }
+
+        function closeConfirmModal() {
+            pendingConfirmAction = null;
+            confirmModal.classList.remove('open');
+            confirmModal.setAttribute('aria-hidden', 'true');
+        }
+
         function limpiarAlertas() {
-            if (confirm('¿Eliminar todo el historial de alertas?')) {
+            openConfirmModal('¿Eliminar todo el historial de alertas? Esta acción no se puede deshacer.', () => {
                 alerts = [];
                 processedIds.clear();
+                activeAlertId = null;
                 localStorage.removeItem(STORAGE_KEY);
-                renderAlerts();
-            }
+                closeModal();
+                renderAll();
+            });
         }
 
         function exportarAlertas() {
@@ -447,138 +1006,339 @@
             URL.revokeObjectURL(url);
         }
 
-        // ===== ALERTS =====
-        function generateAlertId(alerta) {
-            // Crear ID único basado en dispositivo + timestamp
-            return `${alerta.ID_dispositivo}-${alerta.timestamp || alerta.timestamp_ms || alerta.recibido_en}`;
-        }
-
-        function addAlert(data) {
-            if (data.tipo === 'conexion_establecida') return;
-
-            // Deduplicación
-            const alertId = generateAlertId(data);
-            if (processedIds.has(alertId)) {
-                console.log('Alerta duplicada ignorada:', alertId);
-                return;
-            }
-
-            processedIds.add(alertId);
-
-            const alert = {
-                id: alertId,
-                prioridad: data.prioridad || 'media',
-                dispositivo: data.ID_dispositivo || 'Desconocido',
-                coordenadas: data.coordenadas || {},
-                gps_real: data.coordenadas?.gps_real ?? null,
-                timestamp: data.timestamp || new Date().toISOString(),
-                recibido_en: data.recibido_en || new Date().toISOString(),
+        function readFiltersFromUI() {
+            filters = {
+                q: filterSearch.value.trim().toLowerCase(),
+                type: filterType.value,
+                priority: filterPriority.value,
+                status: filterStatus.value,
+                from: filterDateFrom.value,
+                to: filterDateTo.value,
             };
-
-            alerts.unshift(alert);
-            alerts = alerts.slice(0, MAX_ALERTS_STORED); // Limitar historial
-
-            saveToStorage();
-            renderAlerts();
         }
 
-        function deleteAlert(alertId) {
-            alerts = alerts.filter(a => a.id !== alertId);
-            processedIds.delete(alertId);
-            saveToStorage();
-            renderAlerts();
+        function filterDateBound(value, endOfDay = false) {
+            if (!value) return null;
+            const parsed = new Date(`${value}T${endOfDay ? '23:59:59.999' : '00:00:00.000'}`);
+            return Number.isNaN(parsed.getTime()) ? null : parsed;
+        }
+
+        function matchesFilters(alert) {
+            const haystack = [
+                alert.ID_dispositivo,
+                alert.tipo_emergencia,
+                alert.prioridad,
+                alert.estado_operativo,
+                alert.geolocalizacion?.direccion,
+                alert.geolocalizacion?.ciudad,
+                alert.geolocalizacion?.estado,
+                alert.unidad_respuesta?.zona,
+                ...(alert.unidad_respuesta?.unidades || []),
+            ].filter(Boolean).join(' ').toLowerCase();
+
+            if (filters.q && !haystack.includes(filters.q)) return false;
+            if (filters.type !== 'all' && String(alert.tipo_emergencia || '').toLowerCase() !== filters.type) return false;
+            if (filters.priority !== 'all' && String(alert.prioridad || '').toLowerCase() !== filters.priority) return false;
+            if (filters.status !== 'all' && getAlertStatus(alert) !== filters.status) return false;
+
+            const alertDate = getAlertDate(alert);
+            const fromDate = filterDateBound(filters.from, false);
+            const toDate = filterDateBound(filters.to, true);
+
+            if (fromDate && (!alertDate || alertDate < fromDate)) return false;
+            if (toDate && (!alertDate || alertDate > toDate)) return false;
+            return true;
+        }
+
+        function getVisibleAlerts() {
+            return alerts.filter(matchesFilters);
+        }
+
+        function updateTypeOptions() {
+            const current = filterType.value || 'all';
+            const types = [...new Set(alerts.map((alert) => String(alert.tipo_emergencia || 'otro').toLowerCase()))].sort();
+            filterType.innerHTML = '<option value="all">Todos</option>' + types.map((type) => `<option value="${escapeHtml(type)}">${escapeHtml(type)}</option>`).join('');
+            if ([...filterType.options].some((option) => option.value === current)) filterType.value = current;
+        }
+
+        function updateSummary(visible = null) {
+            const visibleAlertsSet = visible || getVisibleAlerts();
+            const critical = alerts.filter((a) => ['crítica', 'critica'].includes(String(a.prioridad || '').toLowerCase())).length;
+            const dispatched = alerts.filter((a) => getAlertStatus(a) === 'despachada').length;
+            const attended = alerts.filter((a) => getAlertStatus(a) === 'atendida').length;
+
+            if (alertCount) alertCount.textContent = visibleAlertsSet.length;
+            if (visibleHeaderCount) visibleHeaderCount.textContent = visibleAlertsSet.length;
+            if (visibleCount) visibleCount.textContent = visibleAlertsSet.length;
+            if (totalAlerts) totalAlerts.textContent = alerts.length;
+            if (criticalAlerts) criticalAlerts.textContent = critical;
+            if (dispatchedAlerts) dispatchedAlerts.textContent = dispatched;
+            if (attendedAlerts) attendedAlerts.textContent = attended;
         }
 
         function renderAlerts() {
-            alertCount.textContent = alerts.length;
+            updateTypeOptions();
+            const visible = getVisibleAlerts();
+            updateSummary(visible);
 
-            if (alerts.length === 0) {
+            if (visible.length === 0) {
                 alertasContainer.innerHTML = `
                     <div class="empty-state">
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
                         </svg>
-                        <p>En espera de alertas...</p>
+                        <p>No hay alertas con los filtros actuales.</p>
+                        <small>Prueba cambiar tipo, prioridad, estado o fecha.</small>
                     </div>
                 `;
                 return;
             }
 
-            alertasContainer.innerHTML = alerts.map(alert => {
-                const priorityClass = alert.prioridad.toLowerCase();
-                const recibidoEn = new Date(alert.recibido_en);
-                const tiempoAtrás = getTimeAgo(recibidoEn);
+            alertasContainer.innerHTML = visible.map((rawAlert) => {
+                const alert = normalizeAlert(rawAlert);
+                const priorityClass = String(alert.prioridad || 'media').toLowerCase();
+                const status = getAlertStatus(alert);
+                const received = getAlertDate(alert) || new Date();
+                const units = getAvailableUnits(alert).join(', ');
+                const stateLabel = status === 'atendida' ? 'Atendida' : status === 'despachada' ? 'Despachada' : 'Pendiente';
 
+                // Añadimos status-${status} a las clases de la tarjeta
                 return `
-                    <div class="alerta ${priorityClass}">
-                        <button class="delete-btn" onclick="deleteAlert('${alert.id}')">✕</button>
+                    <article class="alerta ${priorityClass} status-${status}">
+                        <button class="delete-btn" onclick="deleteAlert('${escapeHtml(alert.id)}')">✕</button>
                         <div class="alerta-header">
-                            <div class="alerta-title">
-                                <span>${getPriorityEmoji(alert.prioridad)}</span>
-                                <span class="priority-badge ${priorityClass}">${alert.prioridad}</span>
+                            <div>
+                                <div class="alerta-title">
+                                    <span>${getPriorityEmoji(alert.prioridad)}</span>
+                                    <span class="priority-badge ${priorityClass}">${escapeHtml(alert.prioridad)}</span>
+                                </div>
+                                <div class="alert-badges">
+                                    <span class="chip ${status === 'atendida' ? 'success' : status === 'despachada' ? 'warning' : ''}">${escapeHtml(stateLabel)}</span>
+                                    <span class="chip">Fuente: ${escapeHtml(alert.prioridad_fuente || 'desconocida')}</span>
+                                    <span class="chip">Tipo: ${escapeHtml(alert.tipo_emergencia)}</span>
+                                    ${alert.gps_real === true ? '<span class="chip success">GPS real</span>' : alert.gps_real === false ? '<span class="chip warning">GPS respaldo</span>' : ''}
+                                </div>
                             </div>
-                            <div class="alerta-time">${tiempoAtrás}</div>
+                            <div class="alerta-time">${escapeHtml(getTimeAgo(received))}</div>
                         </div>
                         <div class="alerta-content">
-                            <div class="alerta-field">
-                                <span class="alerta-field-label">Dispositivo:</span>
-                                <span class="alerta-field-value">${alert.dispositivo}</span>
-                            </div>
+                            <div class="alerta-field"><span class="alerta-field-label">Dispositivo:</span><span class="alerta-field-value">${escapeHtml(alert.dispositivo)}</span></div>
+                            <div class="alerta-field"><span class="alerta-field-label">Emergencia:</span><span class="alerta-field-value">${escapeHtml(alert.tipo_emergencia || 'N/A')}</span></div>
                             <div class="alerta-coords">
-                                <div class="alerta-field">
-                                    <span class="alerta-field-label">Ubicación:</span>
-                                    <span class="alerta-field-value">
-                                        ${alert.coordenadas.lat?.toFixed(6) || 'N/A'}, ${alert.coordenadas.lon?.toFixed(6) || 'N/A'}
-                                        &nbsp;<span style="font-size:0.8em;padding:2px 6px;border-radius:4px;background:${alert.gps_real === true ? 'rgba(67,229,165,0.15)' : alert.gps_real === false ? 'rgba(255,165,2,0.15)' : 'transparent'};color:${alert.gps_real === true ? '#43e5a5' : '#ffa502'}">${alert.gps_real === true ? '🛰️ GPS Real' : alert.gps_real === false ? '📍 Respaldo' : ''}</span>
-                                    </span>
-                                </div>
-                                <div class="alerta-field" style="margin-top:4px">
-                                    <span class="alerta-field-label"></span>
-                                    <a class="alerta-field-value" style="color:var(--color-accent);font-size:0.85em;text-decoration:none" href="https://www.google.com/maps?q=${alert.coordenadas.lat},${alert.coordenadas.lon}" target="_blank">📌 Ver en Google Maps</a>
-                                </div>
+                                <div class="alerta-field"><span class="alerta-field-label">Ubicación:</span><span class="alerta-field-value">${Number.isFinite(alert.coordenadas.lat) ? alert.coordenadas.lat.toFixed(6) : 'N/A'}, ${Number.isFinite(alert.coordenadas.lon) ? alert.coordenadas.lon.toFixed(6) : 'N/A'}</span></div>
+                                <div class="alerta-field" style="margin-top:4px"><span class="alerta-field-label"></span><a class="alerta-field-value" style="color:var(--accent);font-size:.85rem;text-decoration:none" href="https://www.google.com/maps?q=${alert.coordenadas.lat},${alert.coordenadas.lon}" target="_blank">📌 Ver en Google Maps</a></div>
                             </div>
-                            <div class="alerta-field">
-                                <span class="alerta-field-label">Hora:</span>
-                                <span class="alerta-field-value">${recibidoEn.toLocaleString('es-MX')}</span>
+                            <div class="alerta-field"><span class="alerta-field-label">Dirección:</span><span class="alerta-field-value">${escapeHtml(alert.geolocalizacion?.direccion || 'N/A')}</span></div>
+                            <div class="alerta-field"><span class="alerta-field-label">Ciudad / Estado:</span><span class="alerta-field-value">${escapeHtml(alert.geolocalizacion?.ciudad || 'N/A')} / ${escapeHtml(alert.geolocalizacion?.estado || 'N/A')}</span></div>
+                            <div class="alerta-field"><span class="alerta-field-label">Unidades:</span><span class="alerta-field-value">${escapeHtml(units || 'N/A')}</span></div>
+                            <div class="alerta-field"><span class="alerta-field-label">Hora:</span><span class="alerta-field-value">${escapeHtml(received.toLocaleString('es-MX'))}</span></div>
+                            
+                            <div class="alert-actions">
+                                <button class="card-btn primary" title="Ver detalles completos" type="button" onclick="openAlertModal('${escapeHtml(alert.id)}')">📄 Detalles</button>
+                                ${status !== 'atendida' ? `
+                                    <button class="card-btn warning" title="Enviar unidades al lugar" type="button" onclick="quickDispatch('${escapeHtml(alert.id)}')">🚓 Enviar Unidad</button>
+                                    <button class="card-btn success" title="Cerrar incidente" type="button" onclick="quickAttend('${escapeHtml(alert.id)}')">✅ Marcar Resuelto</button>
+                                ` : `
+                                    <span class="muted" style="font-size: 0.85rem; display: flex; align-items: center; padding: 0 10px;">Incidente cerrado</span>
+                                `}
                             </div>
                         </div>
-                    </div>
+                    </article>
                 `;
             }).join('');
         }
 
-        function getPriorityEmoji(priority) {
-            const emojis = {
-                'crítica': '🔴',
-                'critica': '🔴',
-                'alta': '🟠',
-                'media': '🟡',
-                'baja': '🟢'
+        function closeModal() {
+            activeAlertId = null;
+            alertModal.classList.remove('open');
+            alertModal.setAttribute('aria-hidden', 'true');
+        }
+
+        function renderModal(alert) {
+            if (!alert) return;
+            const state = getAlertStatus(alert);
+            const units = getAvailableUnits(alert);
+
+            modalTitle.textContent = `Detalle de alerta • ${alert.dispositivo}`;
+            modalBadges.innerHTML = `
+                <span class="chip ${['crítica', 'critica'].includes(String(alert.prioridad || '').toLowerCase()) ? 'warning' : ''}">${escapeHtml(alert.prioridad)}</span>
+                <span class="chip">${escapeHtml(alert.tipo_emergencia)}</span>
+                <span class="chip ${state === 'atendida' ? 'success' : state === 'despachada' ? 'warning' : ''}">${escapeHtml(state)}</span>
+            `;
+
+            modalIdentity.innerHTML = `
+                <div><strong>Dispositivo:</strong> ${escapeHtml(alert.ID_dispositivo)}</div>
+                <div><strong>Prioridad:</strong> ${escapeHtml(alert.prioridad)}</div>
+                <div><strong>Fuente:</strong> ${escapeHtml(alert.prioridad_fuente || 'desconocida')}</div>
+                <div><strong>Estado:</strong> ${escapeHtml(state)}</div>
+                <div><strong>Recibido en:</strong> ${escapeHtml(new Date(alert.recibido_en).toLocaleString('es-MX'))}</div>
+                <div><strong>Timestamp:</strong> ${escapeHtml(alert.timestamp || 'N/A')}</div>
+            `;
+
+            modalGeo.innerHTML = `
+                <div><strong>Coordenadas:</strong> ${Number.isFinite(alert.coordenadas.lat) ? alert.coordenadas.lat.toFixed(6) : 'N/A'}, ${Number.isFinite(alert.coordenadas.lon) ? alert.coordenadas.lon.toFixed(6) : 'N/A'}</div>
+                <div><strong>GPS:</strong> ${alert.gps_real === true ? 'Real' : alert.gps_real === false ? 'Respaldo' : 'Desconocido'}</div>
+                <div><strong>Dirección:</strong> ${escapeHtml(alert.geolocalizacion?.direccion || 'N/A')}</div>
+                <div><strong>Ciudad / Estado:</strong> ${escapeHtml(alert.geolocalizacion?.ciudad || 'N/A')} / ${escapeHtml(alert.geolocalizacion?.estado || 'N/A')}</div>
+                <div><strong>País:</strong> ${escapeHtml(alert.geolocalizacion?.pais || 'N/A')}</div>
+                <div><strong>Zona despacho:</strong> ${escapeHtml(alert.unidad_respuesta?.zona || 'N/A')}</div>
+            `;
+
+            modalDispatch.innerHTML = `
+                <div><strong>Unidades sugeridas:</strong> ${escapeHtml(units.join(', ') || 'N/A')}</div>
+                <div><strong>Unidad despachada:</strong> ${escapeHtml(alert.unidad_despachada || 'N/A')}</div>
+                <div><strong>Despachada en:</strong> ${escapeHtml(alert.despachada_en ? new Date(alert.despachada_en).toLocaleString('es-MX') : 'N/A')}</div>
+                <div><strong>Atendida en:</strong> ${escapeHtml(alert.atendida_en ? new Date(alert.atendida_en).toLocaleString('es-MX') : 'N/A')}</div>
+                <div><strong>Última observación:</strong> ${escapeHtml(alert.ultima_observacion || 'N/A')}</div>
+            `;
+
+            const actions = (alert.acciones || []).slice(-5).reverse();
+            modalTimeline.innerHTML = actions.length
+                ? actions.map((entry) => `
+                    <div>
+                        <strong>${escapeHtml(entry.tipo || 'acción')}</strong><br>
+                        <span class="muted">${escapeHtml(entry.timestamp ? new Date(entry.timestamp).toLocaleString('es-MX') : 'N/A')}</span><br>
+                        <span>${escapeHtml(entry.nota || entry.detalle || entry.unidad || '')}</span>
+                    </div>
+                `).join('')
+                : '<div class="muted">Sin acciones registradas todavía.</div>';
+
+            modalUnitSelect.innerHTML = units.map((unit) => `<option value="${escapeHtml(unit)}">${escapeHtml(unit)}</option>`).join('');
+            modalUnitSelect.value = units[0] || '';
+            modalNotes.value = alert.ultima_observacion || '';
+
+            alertModal.classList.add('open');
+            alertModal.setAttribute('aria-hidden', 'false');
+        }
+
+        function openAlertModal(alertId) {
+            const alert = alerts.find((item) => item.id === alertId);
+            if (!alert) return;
+            activeAlertId = alertId;
+            renderModal(alert);
+        }
+
+        function getSelectedAlert() {
+            return alerts.find((alert) => alert.id === activeAlertId) || null;
+        }
+
+        function writeAlert(updatedAlert) {
+            alerts = alerts.map((alert) => alert.id === updatedAlert.id ? normalizeAlert(updatedAlert) : alert);
+            saveToStorage();
+            renderAll();
+        }
+
+        function commitAlertAction(type) {
+            const alert = getSelectedAlert();
+            if (!alert) return;
+
+            const now = new Date().toISOString();
+            const unit = modalUnitSelect.value || getAvailableUnits(alert)[0] || 'SIN_UNIDAD';
+            const note = modalNotes.value.trim();
+
+            const updated = {
+                ...alert,
+                acciones: [...(alert.acciones || []), { tipo: type, timestamp: now, unidad: unit, nota: note || '', alertId: alert.id }],
             };
-            return emojis[priority?.toLowerCase()] || '⚪';
+
+            if (type === 'despacho') {
+                updated.estado_operativo = 'despachada';
+                updated.despachada = true;
+                updated.despachada_en = now;
+                updated.unidad_despachada = unit;
+            }
+
+            if (type === 'atencion') {
+                updated.estado_operativo = 'atendida';
+                updated.atendida = true;
+                updated.atendida_en = now;
+            }
+
+            updated.ultima_observacion = note || updated.ultima_observacion || '';
+            writeAlert(updated);
+            renderModal(updated);
         }
 
-        function getTimeAgo(date) {
-            const now = new Date();
-            const seconds = Math.floor((now - date) / 1000);
-
-            if (seconds < 60) return 'Hace poco';
-            const minutes = Math.floor(seconds / 60);
-            if (minutes < 60) return `Hace ${minutes}m`;
-            const hours = Math.floor(minutes / 60);
-            if (hours < 24) return `Hace ${hours}h`;
-            const days = Math.floor(hours / 24);
-            return `Hace ${days}d`;
+        function quickDispatch(alertId) {
+            // Abrimos modal y despachamos automáticamente desde la vista principal
+            openAlertModal(alertId);
+            commitAlertAction('despacho');
+            closeModal(); // Cerramos modal automáticamente para agilidad
         }
 
-        // ===== WEBSOCKET =====
+        function quickAttend(alertId) {
+            // Abrimos modal y atendemos automáticamente desde la vista principal
+            openAlertModal(alertId);
+            commitAlertAction('atencion');
+            closeModal(); // Cerramos modal automáticamente para agilidad
+        }
+
+        function saveActionFromModal() {
+            const alert = getSelectedAlert();
+            if (!alert) return;
+            const now = new Date().toISOString();
+            const note = modalNotes.value.trim();
+            const unit = modalUnitSelect.value || getAvailableUnits(alert)[0] || 'SIN_UNIDAD';
+
+            const updated = {
+                ...alert,
+                ultima_observacion: note || 'Nota guardada desde el panel',
+                acciones: [...(alert.acciones || []), { tipo: 'nota_operativa', timestamp: now, unidad: unit, nota: note || 'Nota guardada desde el panel', alertId: alert.id }],
+            };
+
+            writeAlert(updated);
+            renderModal(updated);
+        }
+
+        function deleteAlert(alertId) {
+            alerts = alerts.filter((alert) => alert.id !== alertId);
+            processedIds.delete(alertId);
+            if (activeAlertId === alertId) closeModal();
+            saveToStorage();
+            renderAll();
+        }
+
+        function resetFilters() {
+            filterSearch.value = '';
+            filterType.value = 'all';
+            filterPriority.value = 'all';
+            filterStatus.value = 'all';
+            filterDateFrom.value = '';
+            filterDateTo.value = '';
+            applyFilters();
+        }
+
+        function applyFilters() {
+            readFiltersFromUI();
+            renderAll();
+        }
+
+        function renderAll() {
+            renderAlerts();
+            if (activeAlertId) {
+                const current = alerts.find((alert) => alert.id === activeAlertId);
+                if (current) renderModal(current);
+            }
+        }
+
+        function addAlert(data) {
+            const payload = unwrapAlertPayload(data);
+            if (data?.tipo === 'conexion_establecida' || payload?.tipo === 'conexion_establecida') return;
+
+            const alertId = generateAlertId(payload);
+            if (processedIds.has(alertId)) return;
+            processedIds.add(alertId);
+            alerts.unshift(normalizeAlert({ ...payload, id: alertId }));
+            alerts = alerts.slice(0, MAX_ALERTS_STORED);
+            saveToStorage();
+            renderAll();
+        }
+
         function connectWebSocket() {
             if (ws) return;
-
             ws = new WebSocket('ws://localhost:3004');
 
             ws.onopen = () => {
-                console.log('WebSocket conectado');
                 statusBadge.classList.remove('disconnected');
                 statusBadge.classList.add('connected');
                 statusText.textContent = '🟢 Conectado';
@@ -586,7 +1346,6 @@
             };
 
             ws.onclose = () => {
-                console.log('WebSocket desconectado');
                 ws = null;
                 statusBadge.classList.remove('connected');
                 statusBadge.classList.add('disconnected');
@@ -596,31 +1355,79 @@
 
             ws.onmessage = (event) => {
                 try {
-                    const data = JSON.parse(event.data);
-                    addAlert(data);
+                    addAlert(JSON.parse(event.data));
                 } catch (err) {
                     console.error('Error parsing message:', err);
                 }
             };
 
-            ws.onerror = (error) => {
-                console.error('WebSocket error:', error);
+            ws.onerror = () => {
                 statusBadge.classList.remove('connected');
                 statusBadge.classList.add('disconnected');
                 statusText.textContent = '🔴 Error de conexión';
             };
         }
 
-        // ===== INIT =====
         document.addEventListener('DOMContentLoaded', () => {
             loadFromStorage();
+            readFiltersFromUI();
+
+            btnApplyFilters.addEventListener('click', applyFilters);
+            btnResetFilters.addEventListener('click', resetFilters);
+            btnClearModalSelection.addEventListener('click', () => {
+                modalNotes.value = '';
+                modalUnitSelect.selectedIndex = 0;
+            });
+            btnCloseModal.addEventListener('click', closeModal);
+            btnSimulateDispatch.addEventListener('click', () => commitAlertAction('despacho'));
+            btnMarkAttended.addEventListener('click', () => commitAlertAction('atencion'));
+            btnSaveAction.addEventListener('click', saveActionFromModal);
+            btnCloseConfirmModal.addEventListener('click', closeConfirmModal);
+            btnCancelConfirm.addEventListener('click', closeConfirmModal);
+            btnAcceptConfirm.addEventListener('click', () => {
+                const action = pendingConfirmAction;
+                closeConfirmModal();
+                if (action) action();
+            });
+
+            [filterSearch, filterType, filterPriority, filterStatus, filterDateFrom, filterDateTo].forEach((input) => {
+                input.addEventListener('input', applyFilters);
+                input.addEventListener('change', applyFilters);
+            });
+
+            alertModal.addEventListener('click', (event) => {
+                if (event.target === alertModal) closeModal();
+            });
+
+            confirmModal.addEventListener('click', (event) => {
+                if (event.target === confirmModal) closeConfirmModal();
+            });
+
+            window.addEventListener('keydown', (event) => {
+                if (event.key === 'Escape') {
+                    closeModal();
+                    closeConfirmModal();
+                }
+            });
+
             connectWebSocket();
+            try {
+                renderAll();
+            } catch (err) {
+                console.error('Error inicializando panel:', err);
+            }
         });
 
-        // Reconectar al cerrar sesión/cambiar tab
         window.addEventListener('beforeunload', () => {
             if (ws) ws.close();
         });
+
+        window.limpiarAlertas = limpiarAlertas;
+        window.exportarAlertas = exportarAlertas;
+        window.deleteAlert = deleteAlert;
+        window.openAlertModal = openAlertModal;
+        window.quickDispatch = quickDispatch;
+        window.quickAttend = quickAttend;
     </script>
 </body>
 </html>
