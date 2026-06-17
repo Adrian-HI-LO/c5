@@ -1,4 +1,4 @@
-# 🚨 Sistema C5 - Alerta Ciudadana
+# Sistema C5 - Alerta Ciudadana
 
 Sistema distribuido de alerta ciudadana que simula la infraestructura de un centro de comando y control (C5). El sistema recibe alertas desde dispositivos físicos **ESP32** con botón de pánico, las procesa a través de **5 microservicios independientes** y notifica a operadores en tiempo real.
 
@@ -39,22 +39,22 @@ flowchart LR
 
 ---
 
-## 🧭 Guía de Rúbrica (dónde está cada cosa)
+## Guía de Rúbrica 
 
 Esta sección te sirve para explicar y demostrar cada criterio con evidencia concreta del repo.
 
 | Criterio de rúbrica | Estado | Evidencia (archivo/ruta) | Qué mostrar en demo |
 |---|---|---|---|
-| Diagrama de arquitectura | ✅ | `docs/arquitectura.md`, diagrama Mermaid en este README | Flujo completo ESP32 → operador → historial |
-| ADRs (≥3) con justificación | ✅ | `docs/adr/ADR-001-comunicacion-grpc.md`, `ADR-002-consistencia-postgresql.md`, `ADR-003-redis-colas.md` | Contexto, alternativas y decisión en cada ADR |
-| 5 microservicios funcionales | ✅ | `services/ms-recepcionAlertas`, `ms-geolocalizacion`, `ms-prioridad`, `ms-notificaciones`, `ms-historial` | Logs de paso por cada microservicio |
-| gRPC + contrato .proto | ✅ | `services/ms-historial/proto/historial.proto`, `services/ms-notificaciones/grpc/client.js`, `services/ms-historial/grpc/server.js` | Registro por gRPC y fallback si falla |
-| Tolerancia a fallos (notificaciones) | ✅ | `services/ms-notificaciones/models/notificacionModel.js`, colas Redis `failed_notifications_queue` y `historial_queue` | Parar `ms-notificaciones`, enviar alertas, reiniciar y ver entrega |
-| Balanceo 3 instancias recepción | ✅* | `docker-compose.yml` (3 instancias), `services/ms-recepcionAlertas/index.js` (`$share/...`), `nginx/nginx.conf` (`least_conn` HTTP) | Logs en 3 instancias + explicación shared subscription |
-| Replicación y consistencia | ✅ | `docker-compose.yml` (`postgres-master`/`postgres-replica`), `services/ms-historial/models/alertaDbModel.js` (write master/read replica), ADR-002 | Query de replicación + consulta historial desde réplica |
-| REST documentado con OpenAPI | ✅ | `docs/openapi.yaml` | Abrir archivo y mapear endpoints usados |
-| Sistema levanta con un comando | ✅ | `docker-compose.yml`, `.env.example` | `docker-compose up --build` |
-| README claro y reproducible | ✅ | `README.md` | Seguir sección Inicio Rápido |
+| Diagrama de arquitectura |  | `docs/arquitectura.md`, diagrama Mermaid en este README | Flujo completo ESP32 → operador → historial |
+| ADRs (≥3) con justificación |  | `docs/adr/ADR-001-comunicacion-grpc.md`, `ADR-002-consistencia-postgresql.md`, `ADR-003-redis-colas.md` | Contexto, alternativas y decisión en cada ADR |
+| 5 microservicios funcionales |  | `services/ms-recepcionAlertas`, `ms-geolocalizacion`, `ms-prioridad`, `ms-notificaciones`, `ms-historial` | Logs de paso por cada microservicio |
+| gRPC + contrato .proto |  | `services/ms-historial/proto/historial.proto`, `services/ms-notificaciones/grpc/client.js`, `services/ms-historial/grpc/server.js` | Registro por gRPC y fallback si falla |
+| Tolerancia a fallos (notificaciones) |  | `services/ms-notificaciones/models/notificacionModel.js`, colas Redis `failed_notifications_queue` y `historial_queue` | Parar `ms-notificaciones`, enviar alertas, reiniciar y ver entrega |
+| Balanceo 3 instancias recepción | * | `docker-compose.yml` (3 instancias), `services/ms-recepcionAlertas/index.js` (`$share/...`), `nginx/nginx.conf` (`least_conn` HTTP) | Logs en 3 instancias + explicación shared subscription |
+| Replicación y consistencia |  | `docker-compose.yml` (`postgres-master`/`postgres-replica`), `services/ms-historial/models/alertaDbModel.js` (write master/read replica), ADR-002 | Query de replicación + consulta historial desde réplica |
+| REST documentado con OpenAPI |  | `docs/openapi.yaml` | Abrir archivo y mapear endpoints usados |
+| Sistema levanta con un comando |  | `docker-compose.yml`, `.env.example` | `docker-compose up --build` |
+| README claro y reproducible |  | `README.md` | Seguir sección Inicio Rápido |
 
 \* Para evitar discusión: explica explícitamente que el reparto de alertas MQTT no lo hace Nginx sino el broker MQTT con shared subscription.
 
