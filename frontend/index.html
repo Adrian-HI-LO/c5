@@ -6,18 +6,27 @@
     <title>Panel C5 | Alertas en tiempo real</title>
     <style>
         :root {
-            --bg: #0b0f14;
-            --panel: #111820;
-            --panel-2: #151d27;
-            --border: rgba(255,255,255,0.08);
-            --text: #eef3f8;
-            --muted: #91a4b7;
-            --accent: #4cc9f0;
-            --success: #56f39a;
-            --warning: #ffbf69;
-            --danger: #ff6b6b;
-            --radius: 16px;
-            --shadow: 0 16px 40px rgba(0,0,0,0.28);
+            --primary: #1e3a8a;
+            --primary-light: #3b82f6;
+            --primary-dark: #1e40af;
+            --gray-50: #f9fafb;
+            --gray-100: #f3f4f6;
+            --gray-200: #e5e7eb;
+            --gray-300: #d1d5db;
+            --gray-400: #9ca3af;
+            --gray-500: #6b7280;
+            --gray-600: #4b5563;
+            --gray-700: #374151;
+            --gray-800: #1f2937;
+            --gray-900: #111827;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --info: #3b82f6;
+            --radius: 8px;
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
         }
 
         * { box-sizing: border-box; }
@@ -25,62 +34,66 @@
         body {
             margin: 0;
             min-height: 100vh;
-            font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-            background:
-                radial-gradient(circle at top, rgba(76,201,240,0.12), transparent 30%),
-                linear-gradient(180deg, #081019 0%, var(--bg) 100%);
-            color: var(--text);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+            background: var(--gray-50);
+            color: var(--gray-900);
+            line-height: 1.5;
         }
 
         .container {
-            width: min(1400px, calc(100% - 32px));
+            width: min(1400px, calc(100% - 40px));
             margin: 0 auto;
-            padding: 28px 0 40px;
+            padding: 32px 0;
         }
 
         .header {
             display: flex;
             justify-content: space-between;
-            align-items: center;
-            gap: 16px;
-            margin-bottom: 24px;
+            align-items: flex-start;
+            gap: 32px;
+            margin-bottom: 32px;
+            padding-bottom: 24px;
+            border-bottom: 1px solid var(--gray-200);
         }
 
         .brand h1 {
             margin: 0;
-            font-size: clamp(1.8rem, 3vw, 2.6rem);
-            letter-spacing: -0.03em;
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--gray-900);
+            letter-spacing: -0.01em;
         }
 
         .brand p {
             margin: 8px 0 0;
-            color: var(--muted);
+            color: var(--gray-500);
             max-width: 72ch;
+            font-size: 14px;
         }
 
         .status-indicator {
             display: inline-flex;
             align-items: center;
-            gap: 10px;
-            padding: 12px 16px;
-            background: rgba(255,255,255,0.04);
-            border: 1px solid var(--border);
-            border-radius: 999px;
-            backdrop-filter: blur(10px);
+            gap: 8px;
+            padding: 8px 12px;
+            background: var(--gray-100);
+            border: 1px solid var(--gray-200);
+            border-radius: 6px;
             white-space: nowrap;
+            font-size: 14px;
+            color: var(--gray-700);
         }
 
         .status-indicator .dot {
-            width: 10px;
-            height: 10px;
+            width: 8px;
+            height: 8px;
             border-radius: 50%;
             background: var(--danger);
-            box-shadow: 0 0 0 6px rgba(255,107,107,0.12);
+            flex-shrink: 0;
         }
 
         .status-indicator.connected .dot {
             background: var(--success);
-            box-shadow: 0 0 0 6px rgba(86,243,154,0.12);
         }
 
         .dashboard {
@@ -94,48 +107,47 @@
             gap: 16px;
         }
 
-        .stat-card,
-        .panel,
-        .alerta,
-        .modal {
-            background: linear-gradient(180deg, rgba(17,24,32,0.96), rgba(12,18,26,0.96));
-            border: 1px solid var(--border);
-            box-shadow: var(--shadow);
-        }
-
         .stat-card {
+            background: white;
+            border: 1px solid var(--gray-200);
             border-radius: var(--radius);
-            padding: 16px;
+            padding: 20px;
             display: grid;
             gap: 8px;
+            box-shadow: var(--shadow-sm);
         }
 
         .stat-label {
-            color: var(--muted);
+            color: var(--gray-500);
             text-transform: uppercase;
-            letter-spacing: .08em;
-            font-size: .78rem;
+            letter-spacing: 0.05em;
+            font-size: 12px;
+            font-weight: 600;
         }
 
         .stat-value {
-            font-size: 2rem;
-            font-weight: 800;
+            font-size: 32px;
+            font-weight: 700;
             line-height: 1;
+            color: var(--gray-900);
         }
 
         .stat-subtitle {
-            color: var(--muted);
-            font-size: .88rem;
+            color: var(--gray-500);
+            font-size: 13px;
         }
 
         .stat-success .stat-value { color: var(--success); }
         .stat-critical .stat-value { color: var(--danger); }
         .stat-high .stat-value { color: var(--warning); }
-        .stat-medium .stat-value { color: var(--accent); }
+        .stat-medium .stat-value { color: var(--info); }
 
         .panel {
+            background: white;
+            border: 1px solid var(--gray-200);
             border-radius: var(--radius);
             padding: 24px;
+            box-shadow: var(--shadow-sm);
         }
 
         .filters-header,
@@ -153,10 +165,12 @@
         .alerts-header h2,
         .modal-title h3 {
             margin: 0;
-            letter-spacing: -0.02em;
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--gray-900);
         }
 
-        .muted { color: var(--muted); }
+        .muted { color: var(--gray-500); }
 
         .filters-grid {
             display: grid;
@@ -171,34 +185,44 @@
         }
 
         .field label {
-            color: var(--muted);
+            color: var(--gray-700);
             text-transform: uppercase;
-            letter-spacing: .08em;
-            font-size: .75rem;
+            letter-spacing: 0.05em;
+            font-size: 12px;
+            font-weight: 600;
         }
 
         .field input,
         .field select,
         .modal textarea {
             width: 100%;
-            border-radius: 12px;
-            border: 1px solid rgba(255,255,255,0.08);
-            background: rgba(255,255,255,0.03);
-            color: var(--text);
-            padding: 12px 14px;
+            border-radius: var(--radius);
+            border: 1px solid var(--gray-300);
+            background: white;
+            color: var(--gray-900);
+            padding: 10px 12px;
+            font-size: 14px;
             outline: none;
-            transition: 160ms ease;
+            transition: border-color 160ms ease, box-shadow 160ms ease;
+        }
+
+        .field input::placeholder,
+        .field select::placeholder,
+        .modal textarea::placeholder {
+            color: var(--gray-400);
         }
 
         .field input:focus,
         .field select:focus,
         .modal textarea:focus {
-            border-color: rgba(76,201,240,0.8);
-            box-shadow: 0 0 0 3px rgba(76,201,240,0.12);
+            border-color: var(--primary-light);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
         }
 
         .toolbar {
-            padding: 2px 0 0;
+            padding: 16px 0;
+            font-size: 14px;
+            color: var(--gray-600);
         }
 
         .actions,
@@ -214,30 +238,47 @@
         .chip,
         .status-pill,
         .card-btn {
-            border: 0;
-            border-radius: 999px;
+            border-radius: 6px;
             font: inherit;
+            border: 0;
+            cursor: pointer;
         }
 
         button {
-            cursor: pointer;
-            padding: 12px 16px;
-            background: linear-gradient(180deg, rgba(76,201,240,0.22), rgba(76,201,240,0.14));
-            color: var(--text);
-            border: 1px solid rgba(76,201,240,0.28);
-            transition: transform 160ms ease, border-color 160ms ease, background 160ms ease;
+            padding: 10px 16px;
+            background: var(--primary);
+            color: white;
+            font-size: 14px;
+            font-weight: 500;
+            transition: background 160ms ease, box-shadow 160ms ease;
+            box-shadow: var(--shadow-sm);
         }
 
-        button:hover { transform: translateY(-1px); }
+        button:hover {
+            background: var(--primary-dark);
+            box-shadow: var(--shadow);
+        }
+
+        button:active {
+            transform: scale(0.98);
+        }
 
         .btn-secondary {
-            background: rgba(255,255,255,0.04);
-            border-color: rgba(255,255,255,0.08);
+            background: var(--gray-200);
+            color: var(--gray-900);
+        }
+
+        .btn-secondary:hover {
+            background: var(--gray-300);
         }
 
         .btn-danger {
-            background: rgba(255,107,107,0.12);
-            border-color: rgba(255,107,107,0.22);
+            background: var(--danger);
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #dc2626;
         }
 
         .alerts-header {
@@ -245,54 +286,48 @@
         }
 
         .alerts-count {
-            color: var(--muted);
-            font-size: .95rem;
+            color: var(--gray-500);
+            font-size: 14px;
         }
 
         #alertas {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
             gap: 16px;
         }
 
         .alerta {
             position: relative;
-            border-radius: 18px;
+            background: white;
+            border: 1px solid var(--gray-200);
+            border-left: 4px solid var(--info);
+            border-radius: var(--radius);
             padding: 16px;
             overflow: hidden;
-            transition: all 0.3s ease;
+            transition: all 0.2s ease;
+            box-shadow: var(--shadow-sm);
         }
 
-        .alerta::before {
-            content: '';
-            position: absolute;
-            inset: 0 auto 0 0;
-            width: 4px;
-            background: var(--accent);
+        .alerta:hover {
+            box-shadow: var(--shadow);
+            border-color: var(--gray-300);
         }
 
-        .alerta.crítica::before, .alerta.critica::before { background: var(--danger); }
-        .alerta.alta::before { background: var(--warning); }
-        .alerta.media::before { background: var(--accent); }
-        .alerta.baja::before { background: var(--success); }
+        .alerta.crítica, .alerta.critica { border-left-color: var(--danger); }
+        .alerta.alta { border-left-color: var(--warning); }
+        .alerta.media { border-left-color: var(--info); }
+        .alerta.baja { border-left-color: var(--success); }
 
-        /* --- NUEVOS ESTILOS DE ESTADO --- */
-        .alerta.status-despachada {
-            border: 1px solid rgba(255,191,105, 0.4);
-            box-shadow: 0 0 15px rgba(255,191,105, 0.05);
-        }
-        .alerta.status-despachada::before {
-            background: var(--warning);
+        .alerta.status-despachada { 
+            background: #fffbeb;
+            border-color: #fcd34d;
         }
 
         .alerta.status-atendida {
-            opacity: 0.55;
-            filter: grayscale(40%);
-            border: 1px solid rgba(86,243,154, 0.2);
+            opacity: 0.65;
+            background: #f0fdf4;
         }
-        .alerta.status-atendida::before {
-            background: var(--success);
-        }
+
         .alerta.status-atendida:hover {
             opacity: 1;
         }
@@ -301,16 +336,18 @@
             display: flex;
             justify-content: space-between;
             gap: 12px;
-            align-items: start;
+            align-items: flex-start;
             margin-bottom: 12px;
         }
 
         .alerta-title {
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 8px;
             margin-bottom: 8px;
-            font-size: 1.05rem;
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--gray-900);
         }
 
         .priority-badge,
@@ -318,35 +355,63 @@
         .status-pill {
             display: inline-flex;
             align-items: center;
-            gap: 6px;
-            padding: 7px 12px;
-            font-size: .78rem;
-            letter-spacing: .02em;
+            gap: 4px;
+            padding: 6px 10px;
+            font-size: 12px;
+            font-weight: 500;
+            border-radius: 4px;
+            white-space: nowrap;
         }
 
-        .priority-badge.crítica, .priority-badge.critica,
-        .status-pill.atendida,
+        .priority-badge.crítica, 
+        .priority-badge.critica {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .priority-badge.alta {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .priority-badge.media {
+            background: #dbeafe;
+            color: #1e3a8a;
+        }
+
+        .priority-badge.baja {
+            background: #dcfce7;
+            color: #166534;
+        }
+
         .chip.success {
-            background: rgba(86,243,154,0.12);
-            color: var(--success);
+            background: #dcfce7;
+            color: #166534;
         }
 
-        .priority-badge.alta,
-        .status-pill.despachada,
         .chip.warning {
-            background: rgba(255,191,105,0.12);
-            color: var(--warning);
+            background: #fef3c7;
+            color: #92400e;
         }
 
-        .priority-badge.media,
+        .chip.danger {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
         .chip {
-            background: rgba(76,201,240,0.12);
-            color: var(--accent);
+            background: #f0f9ff;
+            color: #0c2d6b;
+        }
+
+        .status-pill {
+            background: var(--gray-100);
+            color: var(--gray-700);
         }
 
         .alerta-time {
-            color: var(--muted);
-            font-size: .82rem;
+            color: var(--gray-400);
+            font-size: 13px;
             text-align: right;
         }
 
@@ -358,80 +423,138 @@
         .alerta-field {
             display: flex;
             gap: 10px;
-            font-size: .94rem;
+            font-size: 14px;
         }
 
         .alerta-field-label {
             min-width: 110px;
-            color: var(--muted);
+            color: var(--gray-500);
             font-weight: 600;
         }
 
         .alerta-field-value {
-            color: var(--text);
+            color: var(--gray-700);
             flex: 1;
             word-break: break-word;
         }
 
         .alerta-coords {
             padding: 12px;
-            border-radius: 14px;
-            background: rgba(255,255,255,0.03);
-            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: var(--radius);
+            background: var(--gray-50);
+            border: 1px solid var(--gray-200);
+            font-size: 13px;
+            color: var(--gray-600);
+            font-family: 'Courier New', monospace;
         }
 
         .alert-actions {
-            margin-top: 6px;
+            margin-top: 12px;
             display: flex;
-            align-items: center;
+            gap: 8px;
         }
 
         .card-btn {
-            padding: 10px 14px;
-            font-size: .84rem;
-            background: rgba(255,255,255,0.04);
-            color: var(--text);
-            border: 1px solid rgba(255,255,255,0.08);
-            cursor: pointer;
+            padding: 8px 12px;
+            font-size: 13px;
+            background: var(--gray-100);
+            color: var(--gray-900);
+            border: 1px solid var(--gray-300);
             transition: all 0.2s ease;
         }
 
-        .card-btn:hover { transform: translateY(-1px); }
-        .card-btn.primary { border-color: rgba(76,201,240,0.25); background: rgba(76,201,240,0.10); }
-        .card-btn.warning { border-color: rgba(255,191,105,0.25); background: rgba(255,191,105,0.10); }
-        .card-btn.success { border-color: rgba(86,243,154,0.25); background: rgba(86,243,154,0.10); }
+        .card-btn:hover {
+            background: var(--gray-200);
+            border-color: var(--gray-400);
+        }
+
+        .card-btn.primary {
+            background: #dbeafe;
+            color: #0c2d6b;
+            border-color: #93c5fd;
+        }
+
+        .card-btn.primary:hover {
+            background: #bfdbfe;
+        }
+
+        .card-btn.warning {
+            background: #fef3c7;
+            color: #78350f;
+            border-color: #fde68a;
+        }
+
+        .card-btn.warning:hover {
+            background: #fcd34d;
+        }
+
+        .card-btn.success {
+            background: #dcfce7;
+            color: #166534;
+            border-color: #bbf7d0;
+        }
+
+        .card-btn.success:hover {
+            background: #bbf7d0;
+        }
 
         .delete-btn {
             position: absolute;
             top: 12px;
             right: 12px;
-            width: 34px;
-            height: 34px;
-            border-radius: 50%;
+            width: 32px;
+            height: 32px;
+            border-radius: 4px;
             padding: 0;
-            background: rgba(255,255,255,0.03);
-            color: var(--muted);
+            background: var(--gray-100);
+            color: var(--gray-500);
             opacity: 0;
-            border: 1px solid rgba(255,255,255,0.08);
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
         }
 
-        .alerta:hover .delete-btn { opacity: 1; }
+        .alerta:hover .delete-btn {
+            opacity: 1;
+        }
+
+        .delete-btn:hover {
+            background: var(--danger);
+            color: white;
+        }
 
         .empty-state {
             grid-column: 1 / -1;
             text-align: center;
-            padding: 50px 20px;
-            border: 1px dashed rgba(255,255,255,0.12);
+            padding: 60px 20px;
+            border: 2px dashed var(--gray-300);
             border-radius: var(--radius);
-            color: var(--muted);
-            background: rgba(255,255,255,0.02);
+            color: var(--gray-400);
+            background: var(--gray-50);
         }
 
         .empty-state svg {
-            width: 64px;
-            height: 64px;
-            opacity: .28;
-            margin-bottom: 12px;
+            width: 48px;
+            height: 48px;
+            opacity: 0.3;
+            margin-bottom: 16px;
+            color: var(--gray-400);
+        }
+
+        .empty-state p {
+            margin: 0;
+            font-size: 16px;
+            color: var(--gray-700);
+        }
+
+        .empty-state small {
+            display: block;
+            margin-top: 4px;
+            font-size: 14px;
         }
 
         .modal-backdrop {
@@ -440,8 +563,8 @@
             display: none;
             place-items: center;
             padding: 24px;
-            background: rgba(4,8,12,0.72);
-            backdrop-filter: blur(8px);
+            background: rgba(17, 24, 39, 0.75);
+            backdrop-filter: blur(4px);
             z-index: 50;
         }
 
@@ -449,14 +572,19 @@
 
         .modal {
             width: min(1080px, 100%);
-            border-radius: 22px;
-            padding: 22px;
+            background: white;
+            border: 1px solid var(--gray-200);
+            border-radius: var(--radius);
+            padding: 28px;
             max-height: 90vh;
             overflow-y: auto;
+            box-shadow: var(--shadow-lg);
         }
 
         .modal-header {
-            margin-bottom: 18px;
+            margin-bottom: 24px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--gray-200);
         }
 
         .modal-title {
@@ -464,69 +592,109 @@
             gap: 8px;
         }
 
+        .modal-title h3 {
+            font-size: 20px;
+        }
+
         .modal-close {
-            width: 42px;
-            height: 42px;
-            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            border-radius: 4px;
             padding: 0;
+            background: var(--gray-100);
+            color: var(--gray-500);
+            font-size: 20px;
+            transition: all 0.2s ease;
+        }
+
+        .modal-close:hover {
+            background: var(--gray-200);
+            color: var(--gray-700);
         }
 
         .detail-grid {
             display: grid;
             grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 14px;
-            margin-bottom: 18px;
+            gap: 16px;
+            margin-bottom: 24px;
         }
 
         .detail-box {
             padding: 16px;
-            border-radius: 16px;
-            border: 1px solid rgba(255,255,255,0.06);
-            background: rgba(255,255,255,0.03);
+            border-radius: var(--radius);
+            border: 1px solid var(--gray-200);
+            background: var(--gray-50);
         }
 
         .detail-box h4 {
             margin: 0 0 12px;
-            font-size: .95rem;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--gray-900);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
         }
 
         .detail-list {
             display: grid;
-            gap: 8px;
-            color: var(--text);
+            gap: 10px;
+            color: var(--gray-700);
+            font-size: 14px;
+        }
+
+        .detail-list div {
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .detail-list strong {
+            color: var(--gray-500);
+            font-weight: 500;
         }
 
         .modal .compact-grid {
             display: grid;
             grid-template-columns: 220px 1fr;
-            gap: 14px;
+            gap: 16px;
+            margin-top: 24px;
+            padding-top: 24px;
+            border-top: 1px solid var(--gray-200);
         }
 
         .modal-footer {
-            margin-top: 18px;
+            margin-top: 24px;
+            padding-top: 24px;
+            border-top: 1px solid var(--gray-200);
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
         }
 
         .modal textarea {
             resize: vertical;
-            min-height: 44px;
+            min-height: 100px;
         }
 
         .confirm-modal {
-            width: min(520px, 100%);
+            width: min(480px, 100%);
         }
 
         .confirm-body {
-            padding: 8px 2px 4px;
-            color: var(--muted);
+            padding: 16px 0;
+            color: var(--gray-600);
             line-height: 1.6;
+            font-size: 15px;
         }
 
         @media (max-width: 1100px) {
             .stats-grid,
-            .filters-grid,
+            .filters-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
             .detail-grid,
             .modal .compact-grid {
-                grid-template-columns: 1fr 1fr;
+                grid-template-columns: 1fr;
             }
 
             .filters-grid .field:first-child {
@@ -534,9 +702,20 @@
             }
         }
 
-        @media (max-width: 760px) {
+        @media (max-width: 768px) {
             .container { width: min(100% - 20px, 100%); }
-            .header,
+            
+            .header {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 16px;
+                margin-bottom: 24px;
+            }
+
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
             .filters-header,
             .toolbar,
             .alerts-header,
@@ -546,7 +725,6 @@
                 align-items: stretch;
             }
 
-            .stats-grid,
             .filters-grid,
             .detail-grid,
             .modal .compact-grid {
@@ -565,7 +743,15 @@
             button,
             .card-btn {
                 width: 100%;
-                justify-content: center;
+                text-align: center;
+            }
+
+            #alertas {
+                grid-template-columns: 1fr;
+            }
+
+            .modal {
+                padding: 20px;
             }
         }
     </style>
@@ -574,12 +760,12 @@
     <div class="container">
         <header class="header">
             <div class="brand">
-                <h1>Panel C5 de alertas</h1>
-                <p>Vista minimalista para operación en tiempo real: filtra, revisa detalles, simula despacho y marca atenciones sin tocar el canal de llegada de alertas.</p>
+                <h1>Centro C5 - Sistema de Alertas</h1>
+                <p>Plataforma de monitoreo en tiempo real para la gestión operativa de emergencias y despacho de unidades de respuesta.</p>
             </div>
             <div id="status" class="status-indicator disconnected">
                 <span class="dot"></span>
-                <strong id="statusText">🔴 Desconectado</strong>
+                <strong id="statusText">Desconectado</strong>
             </div>
         </header>
 
@@ -610,20 +796,20 @@
             <section class="panel" aria-label="Filtros de alertas">
                 <div class="filters-header">
                     <div>
-                        <h2>Filtros y acciones</h2>
-                        <p class="muted">Filtra por tipo, prioridad, estado o fecha; después abre el detalle para simular despacho o atención.</p>
+                        <h2>Filtros y búsqueda</h2>
+                        <p class="muted">Utiliza los filtros para localizar alertas específicas. Accede al detalle de cada alerta para procesar acciones operativas.</p>
                     </div>
                     <div class="actions">
-                        <button class="btn-secondary" id="btnResetFilters" type="button">Reset filtros</button>
-                        <button class="btn-danger" onclick="limpiarAlertas()" type="button">Limpiar historial</button>
-                        <button onclick="exportarAlertas()" type="button">Descargar historial</button>
+                        <button class="btn-secondary" id="btnResetFilters" type="button">Restablecer filtros</button>
+                        <button class="btn-danger" onclick="limpiarAlertas()" type="button">Eliminar historial</button>
+                        <button onclick="exportarAlertas()" type="button">Exportar datos</button>
                     </div>
                 </div>
 
                 <div class="filters-grid">
                     <div class="field">
                         <label for="filterSearch">Buscar</label>
-                        <input id="filterSearch" type="search" placeholder="Dispositivo, dirección o unidad">
+                        <input id="filterSearch" type="search" placeholder="Buscar por dispositivo, dirección, unidad o zona">
                     </div>
                     <div class="field">
                         <label for="filterType">Tipo</label>
@@ -665,14 +851,14 @@
                     </div>
                     <div class="field">
                         <label>&nbsp;</label>
-                        <button class="btn-secondary" id="btnClearModalSelection" type="button">Limpiar observación</button>
+                        <button class="btn-secondary" id="btnClearModalSelection" type="button">Limpiar campo</button>
                     </div>
                 </div>
             </section>
 
             <div class="toolbar">
-                <div class="muted"><strong>Tip:</strong> puedes abrir el detalle de cada alerta y registrar una acción sin afectar la recepción en vivo.</div>
-                <div class="alerts-count"><span id="alertCount">0</span> visibles de <span id="totalAlerts">0</span> totales</div>
+                <div class="muted"><strong>Información:</strong> Los cambios en alertas se guardan localmente sin afectar la recepción en vivo del sistema.</div>
+                <div class="alerts-count"><span id="alertCount">0</span> de <span id="totalAlerts">0</span> alertas</div>
             </div>
 
             <section class="alerts-header">
@@ -685,8 +871,8 @@
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
                     </svg>
-                    <p>En espera de alertas...</p>
-                    <small>Cuando llegue una alerta, podrás filtrarla y abrir el detalle.</small>
+                    <p>Esperando alertas</p>
+                    <small>Las alertas aparecerán aquí cuando lleguen al sistema.</small>
                 </div>
             </section>
         </main>
@@ -699,7 +885,7 @@
                     <h3 id="modalTitle">Detalle de alerta</h3>
                     <div class="alert-badges" id="modalBadges"></div>
                 </div>
-                <button class="modal-close" id="btnCloseModal" type="button" aria-label="Cerrar">✕</button>
+                <button class="modal-close" id="btnCloseModal" type="button" aria-label="Cerrar">×</button>
             </div>
 
             <div class="detail-grid">
@@ -723,19 +909,19 @@
 
             <div class="compact-grid" style="grid-template-columns: 220px 1fr;">
                 <div class="field">
-                    <label for="modalUnitSelect">Unidad a simular</label>
+                    <label for="modalUnitSelect">Unidad de respuesta</label>
                     <select id="modalUnitSelect"></select>
                 </div>
                 <div class="field">
-                    <label for="modalNotes">Observaciones</label>
-                    <textarea id="modalNotes" placeholder="Ej. patrulla al punto, ambulancia en camino..."></textarea>
+                    <label for="modalNotes">Notas operativas</label>
+                    <textarea id="modalNotes" placeholder="Registre observaciones relevantes sobre la emergencia o acciones tomadas..."></textarea>
                 </div>
             </div>
 
             <div class="modal-footer">
-                <button class="btn-secondary" id="btnMarkAttended" type="button">Marcar atendida</button>
-                <button class="btn-secondary" id="btnSimulateDispatch" type="button">Simular despacho</button>
-                <button id="btnSaveAction" type="button">Guardar acción</button>
+                <button class="btn-secondary" id="btnMarkAttended" type="button">Registrar como atendida</button>
+                <button class="btn-secondary" id="btnSimulateDispatch" type="button">Registrar despacho</button>
+                <button id="btnSaveAction" type="button">Guardar observación</button>
             </div>
         </div>
     </div>
@@ -746,9 +932,9 @@
                 <div class="modal-title">
                     <h3 id="confirmTitle">Confirmar acción</h3>
                 </div>
-                <button class="modal-close" id="btnCloseConfirmModal" type="button" aria-label="Cerrar">✕</button>
+                <button class="modal-close" id="btnCloseConfirmModal" type="button" aria-label="Cerrar">×</button>
             </div>
-            <div class="confirm-body" id="confirmMessage">¿Deseas continuar?</div>
+            <div class="confirm-body" id="confirmMessage">¿Confirma esta acción?</div>
             <div class="modal-footer" style="margin-top: 18px;">
                 <button class="btn-secondary" id="btnCancelConfirm" type="button">Cancelar</button>
                 <button class="btn-danger" id="btnAcceptConfirm" type="button">Confirmar</button>
@@ -900,8 +1086,7 @@
         }
 
         function getPriorityEmoji(priority) {
-            const emojis = { 'crítica': '🔴', 'critica': '🔴', 'alta': '🟠', 'media': '🟡', 'baja': '🟢' };
-            return emojis[String(priority || '').toLowerCase()] || '⚪';
+            return '';
         }
 
         function getTimeAgo(date) {
@@ -973,7 +1158,7 @@
 
         function openConfirmModal(message, onAccept) {
             pendingConfirmAction = typeof onAccept === 'function' ? onAccept : null;
-            confirmMessage.textContent = message || '¿Deseas continuar?';
+            confirmMessage.textContent = message || '¿Confirma esta acción?';
             confirmModal.classList.add('open');
             confirmModal.setAttribute('aria-hidden', 'false');
         }
@@ -985,7 +1170,7 @@
         }
 
         function limpiarAlertas() {
-            openConfirmModal('¿Eliminar todo el historial de alertas? Esta acción no se puede deshacer.', () => {
+            openConfirmModal('Se eliminará permanentemente todo el historial de alertas. Esta acción no puede ser revertida.', () => {
                 alerts = [];
                 processedIds.clear();
                 activeAlertId = null;
@@ -1101,6 +1286,18 @@
                 const received = getAlertDate(alert) || new Date();
                 const units = getAvailableUnits(alert).join(', ');
                 const stateLabel = status === 'atendida' ? 'Atendida' : status === 'despachada' ? 'Despachada' : 'Pendiente';
+                const address = String(alert.geolocalizacion?.direccion || '').trim();
+                const city = String(alert.geolocalizacion?.ciudad || '').trim();
+                const stateName = String(alert.geolocalizacion?.estado || '').trim();
+                const locationRows = [];
+
+                if (address) {
+                    locationRows.push(`<div class="alerta-field"><span class="alerta-field-label">Dirección:</span><span class="alerta-field-value">${escapeHtml(address)}</span></div>`);
+                }
+
+                if (city || stateName) {
+                    locationRows.push(`<div class="alerta-field"><span class="alerta-field-label">Ciudad / Estado:</span><span class="alerta-field-value">${escapeHtml(city || '')}${city && stateName ? ' / ' : ''}${escapeHtml(stateName || '')}</span></div>`);
+                }
 
                 // Añadimos status-${status} a las clases de la tarjeta
                 return `
@@ -1109,7 +1306,6 @@
                         <div class="alerta-header">
                             <div>
                                 <div class="alerta-title">
-                                    <span>${getPriorityEmoji(alert.prioridad)}</span>
                                     <span class="priority-badge ${priorityClass}">${escapeHtml(alert.prioridad)}</span>
                                 </div>
                                 <div class="alert-badges">
@@ -1126,10 +1322,9 @@
                             <div class="alerta-field"><span class="alerta-field-label">Emergencia:</span><span class="alerta-field-value">${escapeHtml(alert.tipo_emergencia || 'N/A')}</span></div>
                             <div class="alerta-coords">
                                 <div class="alerta-field"><span class="alerta-field-label">Ubicación:</span><span class="alerta-field-value">${Number.isFinite(alert.coordenadas.lat) ? alert.coordenadas.lat.toFixed(6) : 'N/A'}, ${Number.isFinite(alert.coordenadas.lon) ? alert.coordenadas.lon.toFixed(6) : 'N/A'}</span></div>
-                                <div class="alerta-field" style="margin-top:4px"><span class="alerta-field-label"></span><a class="alerta-field-value" style="color:var(--accent);font-size:.85rem;text-decoration:none" href="https://www.google.com/maps?q=${alert.coordenadas.lat},${alert.coordenadas.lon}" target="_blank">📌 Ver en Google Maps</a></div>
+                                <div class="alerta-field" style="margin-top:4px"><span class="alerta-field-label"></span><a class="alerta-field-value" style="color:var(--accent);font-size:.85rem;text-decoration:none" href="https://www.google.com/maps?q=${alert.coordenadas.lat},${alert.coordenadas.lon}" target="_blank">Ver en Google Maps</a></div>
                             </div>
-                            <div class="alerta-field"><span class="alerta-field-label">Dirección:</span><span class="alerta-field-value">${escapeHtml(alert.geolocalizacion?.direccion || 'N/A')}</span></div>
-                            <div class="alerta-field"><span class="alerta-field-label">Ciudad / Estado:</span><span class="alerta-field-value">${escapeHtml(alert.geolocalizacion?.ciudad || 'N/A')} / ${escapeHtml(alert.geolocalizacion?.estado || 'N/A')}</span></div>
+                            ${locationRows.join('')}
                             <div class="alerta-field"><span class="alerta-field-label">Unidades:</span><span class="alerta-field-value">${escapeHtml(units || 'N/A')}</span></div>
                             <div class="alerta-field"><span class="alerta-field-label">Hora:</span><span class="alerta-field-value">${escapeHtml(received.toLocaleString('es-MX'))}</span></div>
                             
@@ -1178,8 +1373,8 @@
             modalGeo.innerHTML = `
                 <div><strong>Coordenadas:</strong> ${Number.isFinite(alert.coordenadas.lat) ? alert.coordenadas.lat.toFixed(6) : 'N/A'}, ${Number.isFinite(alert.coordenadas.lon) ? alert.coordenadas.lon.toFixed(6) : 'N/A'}</div>
                 <div><strong>GPS:</strong> ${alert.gps_real === true ? 'Real' : alert.gps_real === false ? 'Respaldo' : 'Desconocido'}</div>
-                <div><strong>Dirección:</strong> ${escapeHtml(alert.geolocalizacion?.direccion || 'N/A')}</div>
-                <div><strong>Ciudad / Estado:</strong> ${escapeHtml(alert.geolocalizacion?.ciudad || 'N/A')} / ${escapeHtml(alert.geolocalizacion?.estado || 'N/A')}</div>
+                ${String(alert.geolocalizacion?.direccion || '').trim() ? `<div><strong>Dirección:</strong> ${escapeHtml(String(alert.geolocalizacion.direccion).trim())}</div>` : ''}
+                ${(String(alert.geolocalizacion?.ciudad || '').trim() || String(alert.geolocalizacion?.estado || '').trim()) ? `<div><strong>Ciudad / Estado:</strong> ${escapeHtml(String(alert.geolocalizacion?.ciudad || '').trim())}${String(alert.geolocalizacion?.ciudad || '').trim() && String(alert.geolocalizacion?.estado || '').trim() ? ' / ' : ''}${escapeHtml(String(alert.geolocalizacion?.estado || '').trim())}</div>` : ''}
                 <div><strong>País:</strong> ${escapeHtml(alert.geolocalizacion?.pais || 'N/A')}</div>
                 <div><strong>Zona despacho:</strong> ${escapeHtml(alert.unidad_respuesta?.zona || 'N/A')}</div>
             `;
@@ -1201,7 +1396,7 @@
                         <span>${escapeHtml(entry.nota || entry.detalle || entry.unidad || '')}</span>
                     </div>
                 `).join('')
-                : '<div class="muted">Sin acciones registradas todavía.</div>';
+                : '<div class="muted">No hay acciones registradas.</div>';
 
             modalUnitSelect.innerHTML = units.map((unit) => `<option value="${escapeHtml(unit)}">${escapeHtml(unit)}</option>`).join('');
             modalUnitSelect.value = units[0] || '';
@@ -1282,8 +1477,8 @@
 
             const updated = {
                 ...alert,
-                ultima_observacion: note || 'Nota guardada desde el panel',
-                acciones: [...(alert.acciones || []), { tipo: 'nota_operativa', timestamp: now, unidad: unit, nota: note || 'Nota guardada desde el panel', alertId: alert.id }],
+                ultima_observacion: note || 'Registro sin observaciones adicionales',
+                acciones: [...(alert.acciones || []), { tipo: 'nota_operativa', timestamp: now, unidad: unit, nota: note || 'Registro sin observaciones adicionales', alertId: alert.id }],
             };
 
             writeAlert(updated);
@@ -1341,7 +1536,7 @@
             ws.onopen = () => {
                 statusBadge.classList.remove('disconnected');
                 statusBadge.classList.add('connected');
-                statusText.textContent = '🟢 Conectado';
+                statusText.textContent = 'Conectado';
                 clearTimeout(wsReconnectTimeout);
             };
 
@@ -1349,7 +1544,7 @@
                 ws = null;
                 statusBadge.classList.remove('connected');
                 statusBadge.classList.add('disconnected');
-                statusText.textContent = '🔴 Desconectado';
+                statusText.textContent = 'Desconectado';
                 wsReconnectTimeout = setTimeout(connectWebSocket, WS_RECONNECT_INTERVAL);
             };
 
@@ -1364,7 +1559,7 @@
             ws.onerror = () => {
                 statusBadge.classList.remove('connected');
                 statusBadge.classList.add('disconnected');
-                statusText.textContent = '🔴 Error de conexión';
+                statusText.textContent = 'Error de conexión';
             };
         }
 
