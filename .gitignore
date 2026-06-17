@@ -30,3 +30,5 @@ Thumbs.db
 /redis-data
 
 /.refact
+
+update-postgres-replica
